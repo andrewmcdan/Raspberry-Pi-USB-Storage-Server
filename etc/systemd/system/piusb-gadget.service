@@ -1,0 +1,16 @@
+[Unit]
+Description=Pi USB Publisher mass-storage gadget
+After=local-fs.target systemd-modules-load.service systemd-tmpfiles-setup.service
+Before=piusb-web.service
+ConditionPathExists=/etc/piusb/piusb.ini
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/piusb/manager.py gadget-start
+ExecStop=/usr/bin/python3 /opt/piusb/manager.py gadget-stop
+RemainAfterExit=yes
+TimeoutStartSec=180
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

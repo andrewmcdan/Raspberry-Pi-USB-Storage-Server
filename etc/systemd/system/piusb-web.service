@@ -1,0 +1,31 @@
+[Unit]
+Description=Pi USB Publisher web interface
+Wants=network-online.target
+After=network-online.target piusb-gadget.service systemd-tmpfiles-setup.service
+ConditionPathExists=/etc/piusb/web.ini
+
+[Service]
+Type=simple
+User=piusb
+Group=piusb
+WorkingDirectory=/opt/piusb/web
+ExecStart=/usr/bin/python3 -m gunicorn --worker-class gthread --workers 1 --threads 4 --timeout 3600 --bind 0.0.0.0:8080 app:app
+Restart=on-failure
+RestartSec=3
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/srv/piusb /run/piusb
+ReadOnlyPaths=/var/lib/piusb /etc/piusb
+
+[Install]
+WantedBy=multi-user.target

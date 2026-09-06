@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pi USB Publisher</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --page: #0d1219;
+      --panel: #171f2a;
+      --panel2: #111924;
+      --border: #334155;
+      --text: #edf2f7;
+      --muted: #a8b4c7;
+      --primary: #4f8cff;
+      --primary2: #2f6edc;
+      --danger: #d75b66;
+      --success: #51ba7b;
+      --warning: #e6ad45;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--page); color: var(--text); }
+    .wrap { width: min(1120px, 94vw); margin: 0 auto; padding: 1.4rem 0 3rem; }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.2rem; }
+    h1 { font-size: clamp(1.5rem, 3vw, 2.15rem); margin: 0; }
+    h2 { font-size: 1.15rem; margin: 0 0 1rem; }
+    p { line-height: 1.5; }
+    .muted { color: var(--muted); }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 1.1rem; margin-bottom: 1rem; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: .8rem; }
+    .metric { background: var(--panel2); border: 1px solid var(--border); border-radius: 10px; padding: .85rem; }
+    .metric .label { color: var(--muted); font-size: .82rem; }
+    .metric .value { margin-top: .3rem; font-weight: 760; overflow-wrap: anywhere; }
+    .status-line { display: flex; align-items: flex-start; gap: .7rem; margin-top: 1rem; padding: .9rem; background: var(--panel2); border-radius: 10px; }
+    .dot { width: .72rem; height: .72rem; flex: 0 0 auto; margin-top: .32rem; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 4px rgba(168,180,199,.12); }
+    .dot.idle { background: var(--success); box-shadow: 0 0 0 4px rgba(81,186,123,.12); }
+    .dot.building, .dot.switching { background: var(--warning); box-shadow: 0 0 0 4px rgba(230,173,69,.12); }
+    .dot.error, .dot.offline { background: var(--danger); box-shadow: 0 0 0 4px rgba(215,91,102,.12); }
+    .flash { margin-bottom: .75rem; padding: .78rem .9rem; border-radius: 9px; border: 1px solid var(--border); background: var(--panel2); }
+    .flash.success { border-color: #33784f; }
+    .flash.error { border-color: #98434c; }
+    form.inline { display: inline; }
+    label { display: block; font-weight: 680; margin-bottom: .35rem; }
+    input[type="text"], input[type="file"], select { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: .68rem; font: inherit; }
+    .upload-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: .8rem; align-items: end; }
+    .folder-create-grid { display: grid; grid-template-columns: 1fr 1fr auto; gap: .8rem; align-items: end; margin-bottom: 1rem; }
+    button, .button { display: inline-block; border: 0; border-radius: 8px; padding: .68rem .9rem; background: var(--primary); color: white; font: inherit; font-weight: 730; text-decoration: none; cursor: pointer; }
+    button:hover, .button:hover { background: var(--primary2); }
+    button.secondary { background: #344358; }
+    button.danger { background: #8f3942; padding: .42rem .62rem; font-size: .86rem; }
+    button.small { padding: .42rem .62rem; font-size: .86rem; }
+    button:disabled { opacity: .48; cursor: not-allowed; }
+    .publish-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .warning { color: #f2c66d; }
+    .success-text { color: #75d79c; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: .68rem .55rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    th { color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+    td.path { min-width: 260px; overflow-wrap: anywhere; }
+    /* High-contrast links in the staged-file table. */
+    td.path a,
+    td.path a:visited {
+      color: #9ed8ff;
+      font-weight: 650;
+      text-decoration-color: #9ed8ff;
+      text-decoration-thickness: .1em;
+      text-underline-offset: .16em;
+    }
+    td.path a:hover,
+    td.path a:focus-visible {
+      color: #ffffff;
+      background: #26415f;
+      border-radius: 4px;
+      outline: 2px solid #9ed8ff;
+      outline-offset: 2px;
+    }
+    .actions { white-space: nowrap; text-align: right; }
+    .action-row { display: flex; justify-content: flex-end; align-items: center; gap: .45rem; }
+    .folder-path { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; overflow-wrap: anywhere; }
+    .upload-monitor { margin-top: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--panel2); overflow: hidden; }
+    .upload-monitor[hidden] { display: none; }
+    .upload-monitor-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: .9rem; border-bottom: 1px solid var(--border); }
+    .upload-monitor-title { font-weight: 760; }
+    .upload-monitor-actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
+    .overall-progress { padding: .85rem .9rem; border-bottom: 1px solid var(--border); }
+    .progress-track { width: 100%; height: .62rem; margin-top: .48rem; border-radius: 999px; overflow: hidden; background: #263345; }
+    .progress-fill { width: 0; height: 100%; border-radius: inherit; background: var(--primary); transition: width .12s linear; }
+    .progress-meta { display: flex; justify-content: space-between; gap: .75rem; margin-top: .42rem; color: var(--muted); font-size: .84rem; }
+    .upload-list { max-height: 420px; overflow-y: auto; }
+    .upload-item { padding: .82rem .9rem; border-bottom: 1px solid var(--border); }
+    .upload-item:last-child { border-bottom: 0; }
+    .upload-item-head { display: flex; justify-content: space-between; gap: .9rem; align-items: baseline; }
+    .upload-file-name { min-width: 0; font-weight: 680; overflow-wrap: anywhere; }
+    .upload-file-state { flex: 0 0 auto; color: var(--muted); font-size: .86rem; }
+    .upload-item.complete .upload-file-state { color: var(--success); }
+    .upload-item.complete .progress-fill { background: var(--success); }
+    .upload-item.failed .upload-file-state, .upload-item.failed .upload-detail { color: #ef8c95; }
+    .upload-item.failed .progress-fill { background: var(--danger); }
+    .upload-item.cancelled .upload-file-state { color: var(--muted); }
+    .upload-item.cancelled .progress-fill { background: #64748b; }
+    .upload-detail { margin-top: .38rem; color: var(--muted); font-size: .84rem; overflow-wrap: anywhere; }
+    .upload-complete-actions { display: flex; align-items: center; justify-content: space-between; gap: .8rem; padding: .85rem .9rem; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .upload-complete-actions[hidden] { display: none; }
+    .logout { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    code { background: var(--panel2); padding: .1rem .3rem; border-radius: 4px; }
+    @media (max-width: 800px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .upload-grid, .folder-create-grid { grid-template-columns: 1fr; }
+      .action-row { justify-content: flex-start; flex-wrap: wrap; }
+    }
+    @media (max-width: 480px) {
+      .grid { grid-template-columns: 1fr; }
+      header { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Pi USB Publisher</h1>
+        <div class="muted">Double-buffered, read-only USB mass storage</div>
+      </div>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="logout busy-control" type="submit">Sign out</button>
+      </form>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="flash {{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <section class="panel">
+      <h2>Publisher status</h2>
+      <div class="grid">
+        <div class="metric"><div class="label">Active image</div><div class="value" id="active-image">{{ status.active }}</div></div>
+        <div class="metric"><div class="label">USB gadget</div><div class="value" id="gadget-state">{{ 'Online' if status.gadget_online else 'Offline' }}</div></div>
+        <div class="metric"><div class="label">Staged files</div><div class="value" id="staged-count">{{ status.staging.file_count }}</div></div>
+        <div class="metric"><div class="label">Staging usage</div><div class="value" id="staged-size">{{ status.staging.total_text }} / {{ status.staging.limit_text }}</div></div>
+      </div>
+      <div class="status-line">
+        <span class="dot {{ status.state }}" id="status-dot"></span>
+        <div>
+          <strong id="status-state">{{ status.state|title }}</strong>
+          <div class="muted" id="status-message">{{ status.message }}</div>
+          <div class="warning" id="status-error">{{ status.error or '' }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="publish-row">
+        <div>
+          <h2>Publish staged contents</h2>
+          <div id="pending-text" class="{{ 'warning' if status.pending_changes else 'success-text' }}">
+            {{ 'Staging has changes that are not on the USB drive.' if status.pending_changes else 'The active USB image matches staging.' }}
+          </div>
+          <p class="muted">Close files opened from the USB drive before publishing. The drive will disappear for a few seconds, then reconnect with the new image.</p>
+        </div>
+        <form method="post" action="{{ url_for('request_publish') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="busy-control" type="submit" {% if status.state in ['building', 'switching'] or status.request_pending %}disabled{% endif %}>Build and switch USB image</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="panel" id="upload-panel">
+      <h2>Upload files to staging</h2>
+      <form id="upload-form" method="post" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+        <input id="upload-csrf-token" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="upload-grid">
+          <div>
+            <label for="files">Files</label>
+            <input class="busy-control" id="files" name="files" type="file" multiple required>
+          </div>
+          <div>
+            <label for="folder">Destination folder</label>
+            <select class="busy-control" id="folder" name="folder">
+              {% for folder in folders %}
+                <option value="{{ folder.path }}" {% if folder.path == selected_folder %}selected{% endif %}>{{ folder.display }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button class="busy-control" id="upload-submit" type="submit">Upload selected files</button>
+        </div>
+      </form>
+
+      <div class="upload-monitor" id="upload-monitor" hidden aria-live="polite">
+        <div class="upload-monitor-head">
+          <div>
+            <div class="upload-monitor-title" id="upload-batch-title">Upload monitor</div>
+            <div class="muted" id="upload-batch-status">Preparing files...</div>
+          </div>
+          <div class="upload-monitor-actions">
+            <button class="danger" id="cancel-upload" type="button">Stop after current file</button>
+          </div>
+        </div>
+        <div class="overall-progress">
+          <div class="upload-item-head">
+            <strong>Overall progress</strong>
+            <span class="upload-file-state" id="overall-percent">0%</span>
+          </div>
+          <div class="progress-track" id="overall-track" role="progressbar" aria-label="Overall upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-fill" id="overall-fill"></div>
+          </div>
+          <div class="progress-meta">
+            <span id="overall-file-count">0 of 0 files processed</span>
+            <span id="overall-current-file"></span>
+          </div>
+        </div>
+        <div class="upload-list" id="upload-list"></div>
+        <div class="upload-complete-actions" id="upload-complete-actions" hidden>
+          <span id="upload-complete-summary"></span>
+          <button class="secondary" id="refresh-after-upload" type="button">Refresh staged file list</button>
+        </div>
+      </div>
+
+      <p class="muted">Files upload one at a time so every file has an independent progress bar and result. Completed files remain staged even if a later file fails. Uploads change staging only; the host computer sees them after you publish. The image is {{ image_size_mib }} MiB FAT32 with volume label <code>{{ volume_label }}</code>.</p>
+      <noscript><p class="warning">JavaScript is disabled, so uploads use the original batch form without live progress.</p></noscript>
+    </section>
+
+    <section class="panel">
+      <h2>Folder management</h2>
+      <form method="post" action="{{ url_for('create_folder') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="folder-create-grid">
+          <div>
+            <label for="parent-folder">Parent folder</label>
+            <select class="busy-control" id="parent-folder" name="parent_folder">
+              {% for folder in folders %}
+                <option value="{{ folder.path }}" {% if folder.path == selected_folder %}selected{% endif %}>{{ folder.display }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="folder-name">New folder name</label>
+            <input class="busy-control" id="folder-name" name="folder_name" type="text" maxlength="240" placeholder="Example: Pen_Plotter_Drag_Knife" required>
+          </div>
+          <button class="busy-control" type="submit">Create folder</button>
+        </div>
+      </form>
+
+      {% if managed_folders %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Folder</th><th>Files</th><th>Size</th><th></th></tr></thead>
+            <tbody>
+            {% for folder in managed_folders %}
+              <tr>
+                <td class="folder-path">{{ folder.display }}</td>
+                <td>{{ folder.file_count }}</td>
+                <td>{{ folder.total_text }}</td>
+                <td class="actions">
+                  <div class="action-row">
+                    <button class="secondary small busy-control choose-folder" type="button" data-folder="{{ folder.path }}">Use for upload</button>
+                    <form class="inline delete-folder-form" method="post" action="{{ url_for('delete_folder') }}" data-folder="{{ folder.path }}" data-file-count="{{ folder.file_count }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="path" value="{{ folder.path }}">
+                      <button class="danger busy-control" type="submit">Delete folder</button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted">No folders have been created yet. Files can still be uploaded to the USB drive root.</p>
+      {% endif %}
+      <p class="muted">Folder deletion is recursive. It removes the folder, every subfolder, and every file inside it from staging. The active USB drive changes only after the next publish.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Staged files</h2>
+      {% if files %}
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Path</th><th>Size</th><th>Modified</th><th></th></tr></thead>
+            <tbody>
+            {% for file in files %}
+              <tr>
+                <td class="path"><a href="{{ url_for('download_file', relative=file.path) }}">{{ file.path }}</a></td>
+                <td>{{ file.size_text }}</td>
+                <td>{{ file.modified }}</td>
+                <td class="actions">
+                  <form class="inline" method="post" action="{{ url_for('delete_file') }}" onsubmit="return confirm('Delete this staged file?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="path" value="{{ file.path }}">
+                    <button class="danger busy-control" type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted">Staging is empty.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <script>
+    let publisherBusy = {{ 'true' if status.state in ['building', 'switching'] or status.request_pending else 'false' }};
+    let uploadBatchActive = false;
+    let currentUploadXhr = null;
+    let cancelRequested = false;
+
+    const uploadEndpoint = '{{ url_for("api_upload_file") }}';
+    const uploadForm = document.getElementById('upload-form');
+    const filesInput = document.getElementById('files');
+    const uploadSubmit = document.getElementById('upload-submit');
+    const uploadFolder = document.getElementById('folder');
+    const parentFolder = document.getElementById('parent-folder');
+    const csrfValue = document.getElementById('upload-csrf-token').value;
+    const uploadMonitor = document.getElementById('upload-monitor');
+    const uploadBatchTitle = document.getElementById('upload-batch-title');
+    const uploadBatchStatus = document.getElementById('upload-batch-status');
+    const uploadList = document.getElementById('upload-list');
+    const cancelUploadButton = document.getElementById('cancel-upload');
+    const overallFill = document.getElementById('overall-fill');
+    const overallTrack = document.getElementById('overall-track');
+    const overallPercent = document.getElementById('overall-percent');
+    const overallFileCount = document.getElementById('overall-file-count');
+    const overallCurrentFile = document.getElementById('overall-current-file');
+    const uploadCompleteActions = document.getElementById('upload-complete-actions');
+    const uploadCompleteSummary = document.getElementById('upload-complete-summary');
+    const refreshAfterUpload = document.getElementById('refresh-after-upload');
+
+    function rememberSelectedFolder(folder) {
+      const url = new URL(window.location.href);
+      if (folder) {
+        url.searchParams.set('folder', folder);
+      } else {
+        url.searchParams.delete('folder');
+      }
+      window.history.replaceState({}, '', url);
+    }
+
+    uploadFolder.addEventListener('change', () => rememberSelectedFolder(uploadFolder.value));
+
+    document.querySelectorAll('.choose-folder').forEach((button) => {
+      button.addEventListener('click', () => {
+        const folder = button.dataset.folder || '';
+        uploadFolder.value = folder;
+        parentFolder.value = folder;
+        rememberSelectedFolder(folder);
+        document.getElementById('upload-panel').scrollIntoView({behavior: 'smooth', block: 'start'});
+        filesInput.focus({preventScroll: true});
+      });
+    });
+
+    document.querySelectorAll('.delete-folder-form').forEach((form) => {
+      form.addEventListener('submit', (event) => {
+        const folder = form.dataset.folder || '';
+        const fileCount = Number.parseInt(form.dataset.fileCount || '0', 10);
+        const description = fileCount === 1 ? '1 file' : `${fileCount} files`;
+        const confirmed = window.confirm(
+          `Delete /${folder}, all subfolders, and ${description} from staging? ` +
+          'The active USB drive will not change until you publish.'
+        );
+        if (!confirmed) event.preventDefault();
+      });
+    });
+
+    function updateInterfaceState() {
+      const busy = publisherBusy || uploadBatchActive;
+      document.querySelectorAll('.busy-control').forEach((element) => {
+        element.disabled = busy;
+      });
+      cancelUploadButton.disabled = !uploadBatchActive || cancelRequested;
+    }
+
+    function formatBytes(value) {
+      if (!Number.isFinite(value) || value < 0) return '0 B';
+      const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+      let number = value;
+      let unitIndex = 0;
+      while (number >= 1024 && unitIndex < units.length - 1) {
+        number /= 1024;
+        unitIndex += 1;
+      }
+      if (unitIndex === 0) return `${Math.round(number)} ${units[unitIndex]}`;
+      return `${number.toFixed(1)} ${units[unitIndex]}`;
+    }
+
+    function formatDuration(seconds) {
+      if (!Number.isFinite(seconds) || seconds < 0) return '';
+      if (seconds < 60) return `${Math.ceil(seconds)}s`;
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = Math.ceil(seconds % 60);
+      if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
+      const hours = Math.floor(minutes / 60);
+      return `${hours}h ${minutes % 60}m`;
+    }
+
+    function updateUploadButtonLabel() {
+      if (uploadBatchActive) return;
+      const count = filesInput.files ? filesInput.files.length : 0;
+      uploadSubmit.textContent = count > 0
+        ? `Upload ${count} selected file${count === 1 ? '' : 's'}`
+        : 'Upload selected files';
+    }
+
+    function createUploadItem(file, index) {
+      const item = document.createElement('div');
+      item.className = 'upload-item queued';
+
+      const head = document.createElement('div');
+      head.className = 'upload-item-head';
+
+      const name = document.createElement('span');
+      name.className = 'upload-file-name';
+      name.textContent = file.name;
+      name.title = file.name;
+
+      const state = document.createElement('span');
+      state.className = 'upload-file-state';
+      state.textContent = 'Queued';
+
+      head.append(name, state);
+
+      const track = document.createElement('div');
+      track.className = 'progress-track';
+      track.setAttribute('role', 'progressbar');
+      track.setAttribute('aria-label', `Upload progress for ${file.name}`);
+      track.setAttribute('aria-valuemin', '0');
+      track.setAttribute('aria-valuemax', '100');
+      track.setAttribute('aria-valuenow', '0');
+
+      const fill = document.createElement('div');
+      fill.className = 'progress-fill';
+      track.append(fill);
+
+      const detail = document.createElement('div');
+      detail.className = 'upload-detail';
+      detail.textContent = `${formatBytes(file.size)} | Waiting to upload`;
+
+      item.append(head, track, detail);
+      uploadList.append(item);
+
+      return {
+        index,
+        file,
+        element: item,
+        state,
+        track,
+        fill,
+        detail,
+        fraction: 0,
+      };
+    }
+
+    function setItemState(item, className, stateText, detailText, fraction = null) {
+      item.element.classList.remove('queued', 'uploading', 'processing', 'complete', 'failed', 'cancelled');
+      item.element.classList.add(className);
+      item.state.textContent = stateText;
+      if (detailText !== null) item.detail.textContent = detailText;
+      if (fraction !== null) {
+        item.fraction = Math.max(0, Math.min(1, fraction));
+        const percent = Math.round(item.fraction * 100);
+        item.fill.style.width = `${percent}%`;
+        item.track.setAttribute('aria-valuenow', String(percent));
+      }
+    }
+
+    function setOverallProgress(fraction, processedCount, totalCount, currentFile) {
+      const bounded = Math.max(0, Math.min(1, fraction));
+      const percent = Math.round(bounded * 100);
+      overallFill.style.width = `${percent}%`;
+      overallTrack.setAttribute('aria-valuenow', String(percent));
+      overallPercent.textContent = `${percent}%`;
+      overallFileCount.textContent = `${processedCount} of ${totalCount} files processed`;
+      overallCurrentFile.textContent = currentFile || '';
+    }
+
+    function parseResponse(xhr) {
+      try {
+        return JSON.parse(xhr.responseText || '{}');
+      } catch (_error) {
+        return {};
+      }
+    }
+
+    function uploadOneFile(item, folder, onProgress) {
+      return new Promise((resolve) => {
+        const xhr = new XMLHttpRequest();
+        currentUploadXhr = xhr;
+        const formData = new FormData();
+        formData.append('csrf_token', csrfValue);
+        formData.append('folder', folder);
+        formData.append('file', item.file, item.file.name);
+
+        const startedAt = performance.now();
+        let settled = false;
+
+        function finish(result) {
+          if (settled) return;
+          settled = true;
+          if (currentUploadXhr === xhr) currentUploadXhr = null;
+          resolve(result);
+        }
+
+        setItemState(item, 'uploading', 'Uploading 0%', `${formatBytes(0)} of ${formatBytes(item.file.size)}`, 0);
+
+        xhr.upload.addEventListener('progress', (event) => {
+          if (!event.lengthComputable || event.total <= 0) return;
+          const fraction = Math.max(0, Math.min(1, event.loaded / event.total));
+          const logicalLoaded = Math.min(item.file.size, Math.round(item.file.size * fraction));
+          const elapsedSeconds = Math.max((performance.now() - startedAt) / 1000, 0.001);
+          const speed = logicalLoaded / elapsedSeconds;
+          const remainingBytes = Math.max(0, item.file.size - logicalLoaded);
+          const eta = speed > 0 ? remainingBytes / speed : Number.POSITIVE_INFINITY;
+          const percent = Math.round(fraction * 100);
+          let detail = `${formatBytes(logicalLoaded)} of ${formatBytes(item.file.size)}`;
+          if (speed > 0 && fraction < 1) {
+            detail += ` | ${formatBytes(speed)}/s`;
+            const etaText = formatDuration(eta);
+            if (etaText) detail += ` | about ${etaText} remaining`;
+          }
+          setItemState(item, 'uploading', `Uploading ${percent}%`, detail, fraction);
+          onProgress(fraction);
+        });
+
+        xhr.upload.addEventListener('load', () => {
+          setItemState(
+            item,
+            'processing',
+            'Processing',
+            `${formatBytes(item.file.size)} received | Installing into staging...`,
+            1,
+          );
+          onProgress(1);
+        });
+
+        xhr.addEventListener('load', () => {
+          const payload = parseResponse(xhr);
+          if (xhr.status >= 200 && xhr.status < 300 && payload.ok) {
+            const storedPath = payload.file && payload.file.path ? `/${payload.file.path}` : item.file.name;
+            setItemState(
+              item,
+              'complete',
+              'Complete',
+              `${formatBytes(item.file.size)} | Stored as ${storedPath}`,
+              1,
+            );
+            finish({ok: true, payload});
+            return;
+          }
+          const message = payload.error || `Upload failed with HTTP status ${xhr.status || 'unknown'}.`;
+          setItemState(item, 'failed', 'Failed', message);
+          finish({ok: false, error: message});
+        });
+
+        xhr.addEventListener('error', () => {
+          const message = 'Network error while sending this file.';
+          setItemState(item, 'failed', 'Failed', message);
+          finish({ok: false, error: message});
+        });
+
+        xhr.addEventListener('abort', () => {
+          setItemState(item, 'cancelled', 'Canceled', 'This file was not added to staging.');
+          finish({ok: false, canceled: true});
+        });
+
+        xhr.open('POST', uploadEndpoint, true);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.send(formData);
+      });
+    }
+
+    function updateStagingMetrics(staging) {
+      if (!staging) return;
+      document.getElementById('staged-count').textContent = staging.file_count;
+      document.getElementById('staged-size').textContent = `${staging.total_text} / ${staging.limit_text}`;
+      const pending = document.getElementById('pending-text');
+      pending.textContent = 'Staging has changes that are not on the USB drive.';
+      pending.className = 'warning';
+    }
+
+    function approximateStoredFilename(filename) {
+      // Mirrors Werkzeug secure_filename closely enough to catch common cases
+      // where two visibly different source names would map to one FAT32 name.
+      return filename
+        .normalize('NFKD')
+        .replace(/[^\x00-\x7F]/g, '')
+        .trim()
+        .split(/\s+/)
+        .join('_')
+        .replace(/[^A-Za-z0-9_.-]/g, '')
+        .replace(/^[._]+|[._]+$/g, '');
+    }
+
+    function selectedFilesHaveDuplicateNames(files) {
+      const names = new Map();
+      for (const file of files) {
+        const storedName = approximateStoredFilename(file.name);
+        if (!storedName) return {invalid: file.name};
+        const key = storedName.normalize('NFC').toLocaleLowerCase();
+        if (names.has(key)) {
+          return {first: names.get(key), second: file.name, storedName};
+        }
+        names.set(key, file.name);
+      }
+      return null;
+    }
+
+    async function startUploadBatch() {
+      const files = Array.from(filesInput.files || []);
+      if (files.length === 0) return;
+
+      const duplicate = selectedFilesHaveDuplicateNames(files);
+      if (duplicate) {
+        if (duplicate.invalid) {
+          window.alert(
+            `The filename ${duplicate.invalid} cannot be converted to a safe FAT32 filename. ` +
+            'Rename it before uploading.'
+          );
+        } else {
+          window.alert(
+            `${duplicate.first} and ${duplicate.second} would both be stored as ${duplicate.storedName}. ` +
+            'Upload them separately or rename one first.'
+          );
+        }
+        return;
+      }
+
+      const folder = uploadFolder.value || '';
+      const destinationDisplay = folder ? `/${folder}` : '/ (USB drive root)';
+      const items = [];
+      uploadList.replaceChildren();
+      files.forEach((file, index) => items.push(createUploadItem(file, index)));
+
+      uploadMonitor.hidden = false;
+      uploadCompleteActions.hidden = true;
+      uploadBatchTitle.textContent = `Uploading ${files.length} file${files.length === 1 ? '' : 's'}`;
+      uploadBatchStatus.textContent = `Destination: ${destinationDisplay}`;
+      uploadCompleteSummary.textContent = '';
+      cancelUploadButton.textContent = 'Stop after current file';
+      cancelRequested = false;
+      uploadBatchActive = true;
+      updateInterfaceState();
+      setOverallProgress(0, 0, files.length, 'Starting...');
+      uploadMonitor.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+
+      const weights = files.map((file) => Math.max(file.size, 1));
+      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      let completedWeight = 0;
+      let processedCount = 0;
+      let successCount = 0;
+      let failureCount = 0;
+      let canceledCount = 0;
+
+      for (let index = 0; index < items.length; index += 1) {
+        if (cancelRequested) {
+          for (let remaining = index; remaining < items.length; remaining += 1) {
+            setItemState(items[remaining], 'cancelled', 'Canceled', 'Not started.');
+            canceledCount += 1;
+          }
+          break;
+        }
+
+        const item = items[index];
+        uploadBatchStatus.textContent = `Uploading file ${index + 1} of ${items.length} to ${destinationDisplay}`;
+        const result = await uploadOneFile(item, folder, (fraction) => {
+          const overallFraction = (completedWeight + weights[index] * fraction) / totalWeight;
+          setOverallProgress(overallFraction, processedCount, files.length, item.file.name);
+        });
+
+        if (result.ok) {
+          successCount += 1;
+          updateStagingMetrics(result.payload.staging);
+        } else if (result.canceled) {
+          canceledCount += 1;
+        } else {
+          failureCount += 1;
+        }
+
+        completedWeight += weights[index];
+        processedCount += 1;
+        setOverallProgress(completedWeight / totalWeight, processedCount, files.length, item.file.name);
+
+        if (result.canceled && cancelRequested) {
+          for (let remaining = index + 1; remaining < items.length; remaining += 1) {
+            setItemState(items[remaining], 'cancelled', 'Canceled', 'Not started.');
+            canceledCount += 1;
+          }
+          break;
+        }
+      }
+
+      uploadBatchActive = false;
+      currentUploadXhr = null;
+      filesInput.value = '';
+      updateUploadButtonLabel();
+      updateInterfaceState();
+      cancelUploadButton.disabled = true;
+
+      if (cancelRequested) {
+        uploadBatchTitle.textContent = 'Upload batch canceled';
+        uploadBatchStatus.textContent = `${successCount} completed, ${failureCount} failed, ${canceledCount} canceled.`;
+      } else if (failureCount > 0) {
+        uploadBatchTitle.textContent = 'Upload batch finished with errors';
+        uploadBatchStatus.textContent = `${successCount} completed and ${failureCount} failed. Review the file rows below.`;
+      } else {
+        uploadBatchTitle.textContent = 'Upload batch complete';
+        uploadBatchStatus.textContent = `All ${successCount} file${successCount === 1 ? '' : 's'} were added to staging.`;
+      }
+
+      const summaryParts = [];
+      summaryParts.push(`${successCount} uploaded`);
+      if (failureCount > 0) summaryParts.push(`${failureCount} failed`);
+      if (canceledCount > 0) summaryParts.push(`${canceledCount} canceled`);
+      uploadCompleteSummary.textContent = `${summaryParts.join(', ')}. Refresh to update the staged file table.`;
+      uploadCompleteActions.hidden = false;
+      overallCurrentFile.textContent = cancelRequested ? 'Canceled' : 'Finished';
+      await refreshStatus();
+    }
+
+    uploadForm.addEventListener('submit', (event) => {
+      if (!window.XMLHttpRequest || !window.FormData) return;
+      event.preventDefault();
+      if (!uploadBatchActive && !publisherBusy) startUploadBatch();
+    });
+
+    filesInput.addEventListener('change', updateUploadButtonLabel);
+
+    cancelUploadButton.addEventListener('click', () => {
+      if (!uploadBatchActive) return;
+      cancelRequested = true;
+      cancelUploadButton.disabled = true;
+      cancelUploadButton.textContent = 'Stopping after current file...';
+      uploadBatchStatus.textContent = 'The current file will finish safely. Files that have not started will be skipped.';
+    });
+
+    refreshAfterUpload.addEventListener('click', () => window.location.reload());
+
+    window.addEventListener('beforeunload', (event) => {
+      if (!uploadBatchActive) return;
+      event.preventDefault();
+      event.returnValue = '';
+    });
+
+    async function refreshStatus() {
+      try {
+        const response = await fetch('{{ url_for("api_status") }}', {cache: 'no-store'});
+        if (!response.ok) return;
+        const data = await response.json();
+        const wasPublisherBusy = publisherBusy;
+        publisherBusy = ['building', 'switching'].includes(data.state) || data.request_pending;
+        document.getElementById('active-image').textContent = data.active || '?';
+        document.getElementById('gadget-state').textContent = data.gadget_online ? 'Online' : 'Offline';
+        document.getElementById('staged-count').textContent = data.staging.file_count;
+        document.getElementById('staged-size').textContent = `${data.staging.total_text} / ${data.staging.limit_text}`;
+        document.getElementById('status-state').textContent = data.state.charAt(0).toUpperCase() + data.state.slice(1);
+        document.getElementById('status-message').textContent = data.message || '';
+        document.getElementById('status-error').textContent = data.error || '';
+        const dot = document.getElementById('status-dot');
+        dot.className = `dot ${data.state}`;
+        const pending = document.getElementById('pending-text');
+        pending.textContent = data.pending_changes
+          ? 'Staging has changes that are not on the USB drive.'
+          : 'The active USB image matches staging.';
+        pending.className = data.pending_changes ? 'warning' : 'success-text';
+        updateInterfaceState();
+        if (wasPublisherBusy && !publisherBusy && !uploadBatchActive) {
+          window.setTimeout(() => window.location.reload(), 900);
+        }
+      } catch (_error) {
+        // Keep the current page usable if a polling request fails temporarily.
+      }
+    }
+
+    updateUploadButtonLabel();
+    updateInterfaceState();
+    window.setInterval(refreshStatus, 2000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+0ffb63f35d11d1544d53aa1278e2a06b394580e58447b257d19dbe45614fda0e  ./CHANGELOG.md
+b4e18e8c0379302a1974270b445fc399a6a2c4e8b6880ce73ea8dc4eddb9ae47  ./README.md
+6cf4e084b47f33c9b02ef79279d157833868f8f70514169a768be353ee328fea  ./VERSION
+5ed626be6b217118c6de657ab92fb96804b2f57b2a6b89400dca0f03b3177428  ./change-web-password.sh
+e9cdc3645c94990476bc92b920b60e44ea37ff58ab3ad176dc631f7eef3a3dd2  ./etc/piusb/piusb.ini
+25bfc0c5b485b44f5bac8cafbfc0d8d5bcc2186fa0c3e63b4fbb6c35378a41e8  ./etc/systemd/system/piusb-gadget.service
+7d6b7a4c0ae17a4ae7d9bbd9097069a581f06f9fef6b527af6af9674e7825562  ./etc/systemd/system/piusb-publish.path
+6931842d10829273aedbaf80ce4f93e2a4d00f661fccd10dce2289a6f38c41eb  ./etc/systemd/system/piusb-publish.service
+09c721bfdc42033cfa6e1730b7647ad909b0c40e157b951d0ba97a04a043a447  ./etc/systemd/system/piusb-web.service
+ee6eb7601f98cdb37e74d6b99bc89a85f94288ba721f5cd7332d0c4ac0b1ebdf  ./etc/tmpfiles.d/piusb.conf
+b356b141168641068d4fe82f547e52e0a1d3204d816c53e9cb1c9cbcc5d7de77  ./install.sh
+01df97cf961c9aeb430d4c82dcaf479c1ccb12766dbda10eb5d6a12b58672f07  ./opt/piusb/manager.py
+36dd34d8b13d45165de3de3aa5422f81b7813c34cc0a1cbdeafe5be0ab2ebfc0  ./opt/piusb/web/app.py
+122a4bf220c67daf3e6394d11daed2ec014d9f0fa1025638f6fdf3de1bf508ad  ./opt/piusb/web/templates/index.html
+f4d1faad2dd794730b0c1d4ced26caa3b6a81cdf008be5bcb0080c2b5e36a25d  ./opt/piusb/web/templates/login.html
+72fcafb23ad04085da18171ffc0cfffeaa6ddf2d3a9c7b22d04e7bc69d25c791  ./piusbctl

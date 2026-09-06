@@ -1,0 +1,14 @@
+[Unit]
+Description=Build and publish the inactive Pi USB image
+Wants=piusb-gadget.service
+After=piusb-gadget.service local-fs.target
+ConditionPathExists=/etc/piusb/piusb.ini
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/rm -f /run/piusb/publish.request
+ExecStart=/usr/bin/python3 /opt/piusb/manager.py publish
+TimeoutStartSec=infinity
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6

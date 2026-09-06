@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+COMMAND=${1:-status}
+case "${COMMAND}" in
+    status)
+        exec /usr/bin/python3 /opt/piusb/manager.py status
+        ;;
+    verify)
+        exec /usr/bin/python3 /opt/piusb/manager.py verify
+        ;;
+    publish)
+        systemctl start piusb-publish.service
+        exec /usr/bin/python3 /opt/piusb/manager.py status
+        ;;
+    restart-gadget)
+        systemctl restart piusb-gadget.service
+        ;;
+    restart-web)
+        systemctl restart piusb-web.service
+        ;;
+    logs)
+        exec journalctl -u piusb-gadget.service -u piusb-publish.service -u piusb-web.service -n 200 --no-pager
+        ;;
+    *)
+        echo "Usage: piusbctl {status|verify|publish|restart-gadget|restart-web|logs}" >&2
+        exit 2
+        ;;
+esac
