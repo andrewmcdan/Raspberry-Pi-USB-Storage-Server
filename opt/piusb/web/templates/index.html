@@ -290,6 +290,9 @@
                 <td>{{ file.size_text }}</td>
                 <td>{{ file.modified }}</td>
                 <td class="actions">
+                  {% if file.can_preview %}
+                    <a class="button" href="{{ url_for('gcode_viewer.preview', relative=file.path) }}">Preview</a>
+                  {% endif %}
                   <form class="inline" method="post" action="{{ url_for('delete_file') }}" onsubmit="return confirm('Delete this staged file?');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="path" value="{{ file.path }}">

@@ -1,0 +1,2 @@
+# Releases run on Linux; keep scripts and manifest checksums stable on Windows.
+* text=auto eol=lf

@@ -94,6 +94,15 @@ app.config.update(
     SESSION_COOKIE_SAMESITE="Strict",
 )
 
+# Add-on code and assets are only installed when explicitly selected. Old
+# web.ini files remain valid and leave the viewer disabled.
+GCODE_EXTENSIONS: frozenset[str] = frozenset()
+if web_ini.getboolean("gcode_viewer", fallback=False):
+    from gcode_viewer import EXTENSIONS, create_blueprint
+
+    GCODE_EXTENSIONS = EXTENSIONS
+    app.register_blueprint(create_blueprint(lambda relative: safe_staged_path(relative)))
+
 
 @contextmanager
 def staging_lock(*, blocking: bool) -> Iterator[None]:
@@ -144,6 +153,7 @@ def staged_files() -> list[dict]:
                 "size": info.st_size,
                 "size_text": human_size(info.st_size),
                 "modified": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(info.st_mtime)),
+                "can_preview": path.suffix.lower() in GCODE_EXTENSIONS,
             }
         )
     return records

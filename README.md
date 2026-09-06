@@ -1,6 +1,6 @@
 # Pi USB Publisher
 
-Version 1.2.1, 2026-09-05
+Version 1.3.0, 2026-09-06
 
 Pi USB Publisher turns a Raspberry Pi into a read-only USB mass-storage device whose contents are managed through a small web interface.
 
@@ -126,14 +126,14 @@ Reconnect after the reboot.
 From a computer that has the downloaded archive:
 
 ```bash
-scp piusb-double-buffer-1.2.1.tar.gz your-linux-user@piusb.local:~
+scp piusb-double-buffer-1.3.0.tar.gz your-linux-user@piusb.local:~
 ```
 
 On the Pi:
 
 ```bash
 cd ~
-tar -xzf piusb-double-buffer-1.2.1.tar.gz
+tar -xzf piusb-double-buffer-1.3.0.tar.gz
 cd piusb-double-buffer
 sha256sum --check MANIFEST.sha256
 ```
@@ -143,7 +143,7 @@ Every listed file should report `OK` before installation.
 ## 3. Run the installer
 
 ```bash
-sudo ./install.sh
+sudo bash ./install.sh
 ```
 
 The installer asks for:
@@ -152,6 +152,15 @@ The installer asks for:
 - FAT volume label, default `PIUSB`
 - Web username, default `admin`
 - Web password
+- Whether to install the optional G-code viewer, default **No**
+
+For a 3D printer, select **Yes** at the viewer prompt, or select the add-on in advance:
+
+```bash
+sudo bash ./install.sh --with-gcode-viewer
+```
+
+Use `--without-gcode-viewer` to skip that prompt and install the standard web UI. Neither option skips the image-size or credential prompts. The viewer adds no system packages and uses no CDN or external service. Its files are copied only when selected; a standard installation does not load viewer code or expose viewer routes.
 
 The volume label may contain 1 through 11 characters using `A-Z`, `0-9`, underscore, or hyphen.
 
@@ -263,6 +272,49 @@ Deleting the last file inside a folder no longer automatically deletes the empty
 
 The host should rediscover the drive with the new file set. Image A and image B alternate after every successful publish. If building the inactive image fails, the currently active image stays connected.
 
+### Preview 3D printer G-code (optional)
+
+After installing the add-on, choose **Preview** beside a staged `.gcode`, `.gco`, `.g`, or `.nc` file (extensions are case-insensitive). After a new upload, use **Refresh staged file list** to see its Preview link.
+
+- Drag the toolpath to rotate, scroll or use the zoom buttons to zoom, and use **Fit view**, **Top view**, or **3D view** to reset the view.
+- Move the layer slider or use **Previous** / **Next**. Orange is the selected layer; cyan is earlier extrusion. Enable **Selected layer only** to isolate a layer or **Show travel** to include non-extruding moves.
+- Keyboard users can focus the canvas and use arrow keys to rotate, `+` / `-` to zoom, and `0` to fit. The layer slider also supports arrow keys.
+- Loading and parsing happen in a browser worker, with progress and cancellation. Everything stays between your browser and the Pi; an internet connection is not needed.
+
+This is an approximate preview of the **staged copy**, which can differ from the active USB image. Previewing never modifies or publishes files and does not start the printer.
+
+The parser supports `G0`/`G1`, XY-plane `G2`/`G3` arcs with `I`/`J` or `R`, `G90`/`G91`, `M82`/`M83`, `G92`, and millimeter/inch units. Extruder mode changes follow Marlin semantics: `G90` and `G91` clear the `M82`/`M83` override. Layers are inferred from extrusion heights, so travel Z-hops do not create layers. Files without extrusion can be viewed as travel paths.
+
+The preview is not a firmware simulation: macros, bed leveling, home/tool offsets, and printer-specific motions are not simulated. Unsupported commands produce warnings or an error for unsupported motion modes. Binary/compressed G-code is not supported. Limits are 100 MiB, one million rendered segments, and 20,000 extrusion-height changes; unusually large, spiral, or non-planar files may require your slicer's viewer. These limits apply only to previews, not normal uploads, downloads, or publishing.
+
+## Add the viewer to an existing installation
+
+Copy and extract the **complete new release bundle** (or update your checkout) on the Pi, then run from that directory:
+
+```bash
+sha256sum --check MANIFEST.sha256
+sudo bash ./upgrade-gcode-viewer.sh
+```
+
+Use this upgrade script instead of rerunning `install.sh`, which recreates both USB images. The upgrade:
+
+- Updates the web app/templates, installs viewer assets, and sets `gcode_viewer = true` under `[web]` in `/etc/piusb/web.ini`.
+- Preserves usernames, password hashes, session keys, other configuration settings, staged files, USB images, publisher state, and systemd service customizations such as the web port.
+- Briefly stops and starts **only** `piusb-web.service` if it was running. Finish browser uploads before upgrading. The USB gadget and publish services keep running; no reboot is required. A stopped web service remains stopped.
+- Saves replaced files to a private directory under `/var/backups/piusb/gcode-viewer-*` and restores them if installation or validation fails. The printed backup path contains a `files.txt` mapping for manual recovery.
+
+Rerunning the upgrade is supported. Refresh the browser afterward. The add-on's release version is recorded at `/opt/piusb/web/gcode_viewer/VERSION`; an upgrade leaves `/opt/piusb/VERSION` unchanged because it does not replace the USB manager.
+
+To disable an installed viewer, edit `/etc/piusb/web.ini` and set:
+
+```ini
+[web]
+# Keep the existing username, password_hash, secret_key, and other settings.
+gcode_viewer = false
+```
+
+Then run `sudo systemctl restart piusb-web.service`. The Preview links, viewer page, source endpoint, and viewer asset routes are disabled. Run the upgrade script again to re-enable and update it.
+
 ### First end-to-end test
 
 1. Confirm the host can open `README.txt` from the read-only USB drive.
@@ -282,6 +334,7 @@ The host should rediscover the drive with the new file set. Image A and image B 
 /opt/piusb/VERSION                   Installed software version
 /opt/piusb/web/app.py                Flask web application
 /opt/piusb/web/templates/            Web templates
+/opt/piusb/web/gcode_viewer/         Optional G-code viewer (when selected)
 /srv/piusb/staging/                  Canonical file set to publish
 /srv/piusb/incoming/                 Temporary upload transaction area
 /srv/piusb/images/storage-a.img      Image A
@@ -540,3 +593,18 @@ The included USB vendor and product IDs are intended for private experimentation
 - Linux USB gadget configfs documentation: https://docs.kernel.org/usb/gadget_configfs.html
 - Linux mass-storage gadget documentation: https://docs.kernel.org/usb/mass-storage.html
 - Flask file upload documentation: https://flask.palletsprojects.com/en/stable/patterns/fileuploads/
+- Marlin arc commands: https://marlinfw.org/docs/gcode/G002-G003.html
+- Marlin extruder positioning modes: https://marlinfw.org/docs/gcode/M082.html
+
+## Development checks
+
+On Linux (including WSL), with Python 3, Flask, and Node.js 18 or newer available:
+
+```bash
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+node --test tests/gcode-parser.test.js
+bash -n install.sh
+bash -n upgrade-gcode-viewer.sh
+```
+
+The Python tests use temporary directories and mocked service commands. They do not change a real Pi installation or USB images. Optional end-to-end UI checks use `python3 tests/browser_smoke.py` with Playwright and Chromium installed in a development environment; neither is required on the Pi.

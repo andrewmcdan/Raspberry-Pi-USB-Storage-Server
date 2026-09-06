@@ -8,6 +8,17 @@ fi
 
 SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_TXT=/boot/firmware/config.txt
+GCODE_VIEWER=""
+case "${1:-}" in
+    --with-gcode-viewer) GCODE_VIEWER=true ;;
+    --without-gcode-viewer) GCODE_VIEWER=false ;;
+    "") ;;
+    *) echo "Usage: sudo ./install.sh [--with-gcode-viewer|--without-gcode-viewer]" >&2; exit 1 ;;
+esac
+if (( $# > 1 )); then
+    echo "Specify at most one installer option." >&2
+    exit 1
+fi
 
 if [[ ! -f /etc/os-release || ! -f "${CONFIG_TXT}" ]]; then
     echo "This installer expects Raspberry Pi OS with ${CONFIG_TXT}." >&2
@@ -89,6 +100,14 @@ while true; do
 done
 unset WEB_PASSWORD_CONFIRM
 
+if [[ -z ${GCODE_VIEWER} ]]; then
+    read -r -p "Install the optional G-code viewer for 3D printer files? [y/N]: " VIEWER_ANSWER </dev/tty || true
+    case "${VIEWER_ANSWER:-n}" in
+        [yY]|[yY][eE][sS]) GCODE_VIEWER=true ;;
+        *) GCODE_VIEWER=false ;;
+    esac
+fi
+
 echo "Installing required packages..."
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -130,6 +149,10 @@ install -o root -g root -m 0644 "${SOURCE_DIR}/VERSION" /opt/piusb/VERSION
 install -o root -g root -m 0755 "${SOURCE_DIR}/opt/piusb/web/app.py" /opt/piusb/web/app.py
 install -o root -g root -m 0644 "${SOURCE_DIR}/opt/piusb/web/templates/login.html" /opt/piusb/web/templates/login.html
 install -o root -g root -m 0644 "${SOURCE_DIR}/opt/piusb/web/templates/index.html" /opt/piusb/web/templates/index.html
+if [[ ${GCODE_VIEWER} == true ]]; then
+    # Shared file list keeps fresh installs and in-place upgrades identical.
+    /usr/bin/python3 "${SOURCE_DIR}/scripts/upgrade_gcode_viewer.py" --fresh-assets
+fi
 
 install -o root -g piusb -m 0640 "${SOURCE_DIR}/etc/piusb/piusb.ini" /etc/piusb/piusb.ini
 sed -i -E "s/^image_size_mib[[:space:]]*=.*/image_size_mib = ${IMAGE_SIZE_MIB}/" /etc/piusb/piusb.ini
@@ -153,6 +176,7 @@ cat >/etc/piusb/web.ini <<EOF
 username = ${WEB_USERNAME}
 password_hash = ${PASSWORD_HASH}
 secret_key = ${SECRET_KEY}
+gcode_viewer = ${GCODE_VIEWER}
 EOF
 chown root:piusb /etc/piusb/web.ini
 chmod 0640 /etc/piusb/web.ini
@@ -227,6 +251,7 @@ echo "  sudo poweroff"
 echo
 echo "After the Pi boots from the host USB connection, open:"
 echo "  http://$(hostname).local:8080"
+echo "Optional G-code viewer enabled: ${GCODE_VIEWER}"
 echo
 echo "Useful checks:"
 echo "  sudo piusbctl verify"

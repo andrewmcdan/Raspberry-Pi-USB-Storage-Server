@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 - 2026-09-06
+
+- Added an optional, locally served G-code toolpath viewer with 3D rotation, zoom, top view, layer selection, and travel visibility.
+- Added authenticated Preview links for staged plain-text G-code, with browser-worker parsing, progress, cancellation, and bounded preview size/complexity.
+- Added an opt-in installer prompt and `--with-gcode-viewer` / `--without-gcode-viewer` options. Existing configurations default to disabled.
+- Added `upgrade-gcode-viewer.sh` to install the add-on over an existing installation, preserving credentials, configuration, staging, USB images, and service customizations, with backup and automatic rollback on failure.
+- Added parser, web access, and upgrade regression checks, plus optional browser smoke checks.
+- Kept release files at LF line endings for Linux scripts and portable checksum verification.
+
 ## 1.2.1 - 2026-09-05
 
 - Increased contrast for downloadable links in the staged-file list.
