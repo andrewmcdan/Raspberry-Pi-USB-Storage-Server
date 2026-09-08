@@ -36,8 +36,9 @@ normal enrollment and agent execution require HTTPS.
 
 Implementation-run evidence, 2026-09-08:
 
-- **49 automated tests passed** in Linux Docker, including Wi-Fi watchdog and local-web regressions,
+- **62 automated tests and 2 subtests passed** in Linux Docker, including Wi-Fi watchdog and local-web regressions,
   serialized preparation, disk preflight, and stale prepared-image rejection.
+- **15 G-code parser/worker tests passed** after integrating the remote viewer feature.
 - **Compose integration passed** with PostgreSQL 17 and two agent instances:
   offline catch-up, held builds, approval, restart idempotence, and partial failure.
 - **Browser flow verified** in Chrome against the disposable manager: sign-in,

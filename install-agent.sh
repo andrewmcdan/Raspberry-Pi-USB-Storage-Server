@@ -37,6 +37,10 @@ install -o root -g root -m 0644 "${SOURCE_DIR}/opt/piusb/web/templates/index.htm
 for unit in piusb-agent.service piusb-fleet.service piusb-fleet.path; do
     install -o root -g root -m 0644 "${SOURCE_DIR}/etc/systemd/system/${unit}" "/etc/systemd/system/${unit}"
 done
+install -o root -g root -m 0644 "${SOURCE_DIR}/VERSION" /opt/piusb/VERSION
+install -o root -g root -m 0644 "${SOURCE_DIR}/opt/piusb/web/templates/login.html" /opt/piusb/web/templates/login.html
+# Update optional viewer assets while preserving its configured enabled state.
+python3 "${SOURCE_DIR}/scripts/upgrade_gcode_viewer.py" --fresh-assets
 systemctl daemon-reload
 systemctl enable --now piusb-fleet.path piusb-agent.service
 systemctl start piusb-publish.path piusb-web.service

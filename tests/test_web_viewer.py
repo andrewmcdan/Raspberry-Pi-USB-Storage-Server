@@ -4,7 +4,7 @@ import unittest
 from urllib.parse import quote
 from unittest.mock import patch
 
-from web_fixture import WebFixture
+from tests.web_fixture import WebFixture
 
 
 class ViewerTests(unittest.TestCase):

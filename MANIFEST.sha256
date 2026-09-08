@@ -7,7 +7,7 @@ c05731da0248059b6cad846291985f2c7319ab33e24ea2d6434bb3ed3b81d084  ./README.md
 64d23f858ef51b0f996e4966d4e27c0371b437e2d2787890b1f7ad22d4ec5663  ./VERSION
 5ed626be6b217118c6de657ab92fb96804b2f57b2a6b89400dca0f03b3177428  ./change-web-password.sh
 b6a61b4cccfe4aceb1c427864d9718f29a5ab80a5d6febad050fff7d5ddb5c00  ./compose.yaml
-6a4dd1409efcb90b78ca74228901df8ae7c98fb97fe5293248f5b56906a1fa6b  ./docs/acceptance.md
+c62c0fb6c0637300a82a27858fc01d26a6ee96e3da6fa4f6de8d3fe448bab704  ./docs/acceptance.md
 6a2dcd5a6146b26d832f4f618b645b87bf0d0689fc07df6233d6f12ec9968b4a  ./docs/manager.md
 361f0ad29fccf4e52ee18b3825efb7632c3045217f92cbb7006108ae16b5a41a  ./docs/protocol.md
 82e770e7384dda852abb132163f8e2fec8bf5af284baf17613958ca50536c889  ./docs/wifi-recovery.md
@@ -22,7 +22,7 @@ cdd68048c9fe76dfdbe056c0f8bcf68cadadf14dcf7fd98a4bbd58c60d260cfa  ./etc/systemd/
 09c721bfdc42033cfa6e1730b7647ad909b0c40e157b951d0ba97a04a043a447  ./etc/systemd/system/piusb-web.service
 02c5fe8e5c912f46d545da19646b01834cac446b300d44a73e8bf049539993b8  ./etc/systemd/system/piusb-wifi-watchdog.service
 ee6eb7601f98cdb37e74d6b99bc89a85f94288ba721f5cd7332d0c4ac0b1ebdf  ./etc/tmpfiles.d/piusb.conf
-a63229de2da31e9f42b0aad35585a85644d6676f0ec3aebe20d4ba02b4c82473  ./install-agent.sh
+cffedb7a736c471a4ff8f285abda8d63834ac54fe1a880749f54a7de6c83c699  ./install-agent.sh
 5c7a1219019fd5b9a6f7204b497811501f5f667238d15650f922611098b4241b  ./install-wifi-watchdog.sh
 ea175bae009c8bb906c4d17758d4bcaaa6f23fbaa159a9b111e3997cff0ca52c  ./install.sh
 5504aa660eaa123179ae683f91c4d7a1bb31ba4d485c269f4e01ff84e4772f91  ./manager/Dockerfile
@@ -65,7 +65,7 @@ e90b08d48f5d012fae21319b881fc54594e3e51ddff03aebc322a7ee1540194d  ./tests/test_f
 f5c82af3007c1fc5c06ce968e0f19913c17e8c6305f1e78798a724874bcef0ca  ./tests/test_manager.py
 e3efb6bade1d77d6ce9e06a39fdef47237db24af020812449d417be7eb3a62c4  ./tests/test_protocol.py
 640e03d2a7eda8fbdaa6ac7618559c33817150ee277b84cf7aa9df502edb295e  ./tests/test_upgrade_viewer.py
-42aa073022c898e34f2704cfb99eaa63441b0eb38303963901021c790f6cd9f7  ./tests/test_web_viewer.py
+26355da1faa39e8470765a845d4e7fe9a1aba4ff6ae1729988e49cddfd079081  ./tests/test_web_viewer.py
 926d9f9680ccc62f0288098f03587bb9f1d7b87ac896ea1c027d2748757a9b81  ./tests/test_wifi_watchdog.py
 750a51b2d814b10dc913fa0e53f92cf7c5424c22f1df8059f611400f911e13b5  ./tests/web_fixture.py
 050c8c3fc9b72be67efd143aee2a46e4c7d1b2fe98ad94a42b0f1ba812234919  ./upgrade-gcode-viewer.sh
