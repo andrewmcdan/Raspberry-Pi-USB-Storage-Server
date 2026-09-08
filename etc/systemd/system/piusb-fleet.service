@@ -1,0 +1,12 @@
+[Unit]
+Description=Pi USB verified preparation and activation bridge
+After=piusb-gadget.service
+Wants=piusb-gadget.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/piusb/manager.py fleet-request
+TimeoutStartSec=infinity
+Nice=5
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6

@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="csrf" content="{{ csrf }}" />
+    <title>Pi USB Manager</title>
+    <link rel="stylesheet" href="/static/app.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Pi USB Manager</h1>
+      <span>Files, devices & publishing</span
+      ><button style="margin-left: auto" id="logout">Sign out</button>
+    </header>
+    <main>
+      <div id="notice" role="alert"></div>
+      <nav>
+        <button data-tab="fleet">Devices</button
+        ><button data-tab="files">Files & collections</button
+        ><button data-tab="publish">Deploy</button
+        ><button data-tab="history">History</button
+        ><button data-tab="audit">Audit</button>
+      </nav>
+      <section id="fleet">
+        <div class="row">
+          <h2 style="margin: 0">Your storage fleet</h2>
+          <input
+            id="search"
+            placeholder="Search name, location, serial or tag"
+            style="flex: 1"
+          /><button id="enroll" class="primary">Enroll a Pi</button
+          ><button id="group">Save selected as group</button>
+        </div>
+        <p class="muted">
+          Select devices for deployment. Offline devices keep serving their
+          current USB image.
+        </p>
+        <div id="groups" class="row"></div>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Select</th>
+                <th>Device</th>
+                <th>Connection</th>
+                <th>USB / content</th>
+                <th>Control</th>
+              </tr>
+            </thead>
+            <tbody id="devices"></tbody>
+          </table>
+        </div>
+      </section>
+      <section id="files" class="hidden">
+        <h2>Files & collections</h2>
+        <div class="row">
+          <select id="set-picker"></select
+          ><button id="new-collection">New collection</button
+          ><select id="apply-picker"></select
+          ><button id="apply-collection">
+            Copy collection into this draft
+          </button>
+        </div>
+        <p>
+          Draft edits do not change USB contents until you review and deploy.
+          Applying a collection replaces this draft with an independent copy.
+        </p>
+        <div class="row">
+          <label
+            >Destination folder
+            <select id="folder"></select></label
+          ><label
+            >Upload files <input id="uploads" type="file" multiple /></label
+          ><button id="new-folder">New folder</button
+          ><button id="stop-upload">Stop after current file</button>
+        </div>
+        <div id="upload-progress"></div>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Path</th>
+                <th>Size</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="file-list"></tbody>
+          </table>
+        </div>
+      </section>
+      <section id="publish" class="hidden">
+        <h2>Review and deploy</h2>
+        <p id="target-summary"></p>
+        <label
+          >File source
+          <select id="source">
+            <option value="">Each selected Pi’s draft</option>
+          </select></label
+        ><label
+          >Switch policy
+          <select id="policy">
+            <option value="auto">Build and switch automatically</option>
+            <option value="hold">Build, then hold for approval</option>
+            <option value="scheduled">
+              Build now, switch at scheduled time
+            </option>
+            <option value="window">
+              Switch in each Pi’s maintenance window
+            </option>
+          </select></label
+        ><label
+          >Scheduled time (your browser timezone)
+          <input id="due" type="datetime-local" /></label
+        ><label
+          ><input id="resume-local" type="checkbox" /> Return selected Pis from
+          local takeover to manager control and replace local contents</label
+        >
+        <p class="muted">
+          Switching briefly disconnects USB. Close files on the attached host
+          first. A fleet deployment switches each Pi independently.
+        </p>
+        <button id="review" class="primary">Review exact changes</button>
+      </section>
+      <section id="history" class="hidden">
+        <h2>Deployment history</h2>
+        <p>
+          Pause and cancellation take effect when acknowledged. A switch already
+          authorized must finish or recover. Rollback is a new deployment.
+        </p>
+        <div id="batch-summary"></div>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Device / batch</th>
+                <th>Created / policy</th>
+                <th>State</th>
+                <th>Progress / error</th>
+                <th>Controls</th>
+              </tr>
+            </thead>
+            <tbody id="deployments"></tbody>
+          </table>
+        </div>
+      </section>
+      <section id="audit" class="hidden">
+        <h2>Audit history</h2>
+        <div id="audit-list"></div>
+      </section>
+      <dialog id="dialog">
+        <div id="dialog-body"></div>
+        <p><button id="close-dialog">Close</button></p>
+      </dialog>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

@@ -118,6 +118,19 @@
   </style>
 </head>
 <body>
+  {% if fleet_control %}
+  <div class="wrap"><div class="panel">
+    <h2>Fleet control: {{ fleet_control.get('mode', 'unknown') }}</h2>
+    <p>Managed mode allows status viewing. Local takeover waits for any active operation, then enables local file editing. To return control, review and deploy a snapshot in the central manager with “Return from local takeover” selected.</p>
+    {% if fleet_control.get('mode') == 'managed' %}
+    <form method="post" action="{{ url_for('local_takeover') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit">Request local takeover</button>
+    </form>
+    {% endif %}
+    <p>Refresh this page to see takeover acknowledgment.</p>
+  </div></div>
+  {% endif %}
   <div class="wrap">
     <header>
       <div>
@@ -374,7 +387,7 @@
     });
 
     function updateInterfaceState() {
-      const busy = publisherBusy || uploadBatchActive;
+      const busy = publisherBusy || uploadBatchActive || {{ (fleet_control.get('mode') == 'managed') | tojson }};
       document.querySelectorAll('.busy-control').forEach((element) => {
         element.disabled = busy;
       });
@@ -785,5 +798,14 @@
     updateInterfaceState();
     window.setInterval(refreshStatus, 2000);
   </script>
+{% if fleet_control.get('mode') == 'managed' %}
+<script>
+  for (const form of document.forms) {
+    if (!['/logout', '/local-takeover'].includes(new URL(form.action).pathname)) {
+      for (const field of form.elements) field.disabled = true;
+    }
+  }
+</script>
+{% endif %}
 </body>
 </html>

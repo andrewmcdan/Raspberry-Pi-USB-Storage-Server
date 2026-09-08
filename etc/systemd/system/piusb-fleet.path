@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch for narrowly scoped fleet operations
+After=piusb-gadget.service
+
+[Path]
+PathExists=/run/piusb/fleet.request
+PathExists=/run/piusb/takeover.request
+Unit=piusb-fleet.service
+
+[Install]
+WantedBy=multi-user.target

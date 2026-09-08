@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: piusb
+      POSTGRES_USER: piusb
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U piusb -d piusb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+  migrate:
+    build:
+      context: .
+      dockerfile: manager/Dockerfile
+    # Same image as manager, initialized once before serving requests.
+    image: piusb-manager:local
+    environment: &environment
+      DATABASE_URL: postgresql+psycopg://piusb:${POSTGRES_PASSWORD}@db/piusb
+      SECRET_KEY: ${SECRET_KEY:?Set SECRET_KEY in .env}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env}
+      PUBLIC_URL: ${PUBLIC_URL:-https://piusb.example.internal}
+      CONTENT_DIR: /data/content
+    command: [python, -m, manager.app, --init-db]
+    volumes:
+      - content:/data/content
+    depends_on:
+      db:
+        condition: service_healthy
+  manager:
+    image: piusb-manager:local
+    environment: *environment
+    ports:
+      - "127.0.0.1:${MANAGER_PORT:-8000}:8000"
+    volumes:
+      - content:/data/content
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+  scheduler:
+    image: piusb-manager:local
+    environment: *environment
+    command: [python, -m, manager.worker]
+    volumes:
+      - content:/data/content
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+volumes:
+  database:
+  content:

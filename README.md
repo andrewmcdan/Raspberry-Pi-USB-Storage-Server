@@ -1,5 +1,36 @@
 # Pi USB Publisher
 
+## Central fleet manager
+
+This repository now includes an optional Docker-hosted manager and outbound Pi
+agents. Name and group Pis, manage collections or per-Pi file drafts, review
+exact deployment targets, and automatically download, build, and switch USB.
+Schedules, approval holds, pause/cancel, history, retries, and version rollback
+are available in the manager.
+
+From the repository root, with Docker running:
+
+```powershell
+.\start-manager.ps1 -PublicUrl https://piusb.example.internal
+```
+
+```bash
+bash ./start-manager.sh https://piusb.example.internal
+```
+
+The first run asks for an administrator password. Configure your HTTPS reverse
+proxy, then upgrade each existing Pi with `sudo bash ./install-agent.sh` and
+enroll it using the manager's copyable command. This upgrade preserves existing
+images, staging, and local credentials. Do not rerun the original installer to
+upgrade an existing Pi: it recreates the images.
+
+Read [manager setup and operations](docs/manager.md),
+[API protocol](docs/protocol.md), and [acceptance checks](docs/acceptance.md).
+Physical two-Pi USB acceptance remains required before production rollout;
+automated simulation does not establish hardware compatibility.
+
+## Standalone Pi publisher
+
 Version 1.3.0, 2026-09-06
 
 Pi USB Publisher turns a Raspberry Pi into a read-only USB mass-storage device whose contents are managed through a small web interface.

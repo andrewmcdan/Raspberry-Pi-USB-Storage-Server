@@ -27,6 +27,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator
 
+# Stable module identity for the privileged bridge, including direct script execution.
+sys.modules['piusb_publisher'] = sys.modules[__name__]
+
 CONFIG_PATH = Path(os.environ.get("PIUSB_CONFIG", "/etc/piusb/piusb.ini"))
 CONFIGFS_MOUNT = Path("/sys/kernel/config")
 GADGETS_ROOT = CONFIGFS_MOUNT / "usb_gadget"
@@ -574,6 +577,8 @@ def gadget_start(s: Settings) -> None:
                     target=None,
                     error=None,
                     active_build=None,
+                    active_deployment=None,
+                    prepared_deployment=None,
                     build=None,
                     candidate_build=None,
                 )
@@ -587,6 +592,8 @@ def gadget_start(s: Settings) -> None:
                     active=active,
                     target=active,
                     started_at=utc_now(),
+                    active_deployment=None,
+                    prepared_deployment=None,
                 )
                 with exclusive_lock(s.staging_lock):
                     rebuilt_stats = build_image(s, image)
@@ -601,6 +608,8 @@ def gadget_start(s: Settings) -> None:
             error=None,
             gadget_online=True,
         )
+        from fleet import reconcile
+        reconcile(s)
 
 
 def gadget_stop(s: Settings) -> None:
@@ -692,6 +701,9 @@ def publish(s: Settings) -> None:
     s.publish_request.unlink(missing_ok=True)
 
     with exclusive_lock(s.manager_lock):
+        from fleet import is_managed
+        if is_managed(s):
+            raise RuntimeError("Central manager owns publishing; request local takeover first")
         active = read_active_slot(s)
         target = "B" if active == "A" else "A"
         target_image = s.image_for_slot(target)
@@ -709,6 +721,7 @@ def publish(s: Settings) -> None:
         )
 
         try:
+            update_status(s, prepared_deployment=None)
             with exclusive_lock(s.staging_lock):
                 stats = build_image(s, target_image)
 
@@ -723,6 +736,7 @@ def publish(s: Settings) -> None:
                 candidate_build=stats,
             )
 
+            update_status(s, active_deployment=None)
             swap_gadget_image(s, active, target)
 
             update_status(
@@ -738,6 +752,7 @@ def publish(s: Settings) -> None:
                 build=stats,
                 active_build=stats,
                 candidate_build=None,
+                active_deployment=None,
             )
         except Exception as error:
             current_active = read_active_slot(s)
@@ -868,7 +883,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "command",
-        choices=["init-images", "gadget-start", "gadget-stop", "publish", "status", "verify"],
+        choices=["init-images", "gadget-start", "gadget-stop", "publish", "status", "verify", "fleet-request"],
     )
     return parser.parse_args()
 
@@ -889,6 +904,9 @@ def main() -> int:
             show_status(settings)
         elif args.command == "verify":
             return verify(settings)
+        elif args.command == "fleet-request":
+            from fleet import consume
+            consume(settings)
         return 0
     except Exception as error:
         print(f"piusb-manager: {error}", file=sys.stderr)

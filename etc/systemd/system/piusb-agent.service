@@ -1,0 +1,27 @@
+[Unit]
+Description=Pi USB outbound fleet agent
+Wants=network-online.target
+After=network-online.target piusb-gadget.service
+ConditionPathExists=/etc/piusb/agent.json
+
+[Service]
+User=piusb
+Group=piusb
+ExecStart=/usr/bin/python3 /opt/piusb/agent.py run
+Restart=on-failure
+RestartSec=30
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/srv/piusb/agent /run/piusb
+ReadOnlyPaths=/var/lib/piusb /etc/piusb
+
+[Install]
+WantedBy=multi-user.target

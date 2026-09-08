@@ -1,5 +1,17 @@
 # Changelog
 
+## Central fleet manager (unreleased)
+
+- Add Docker-hosted manager, PostgreSQL state, authenticated enrollment, named
+  devices/groups, editable file drafts and collections, and immutable deployment reviews.
+- Add outbound Pi agents with resumable verified downloads, separate prepare and
+  activate operations, durable recovery, schedules/holds, pause/cancel/retry,
+  historical redeployment, retention, and audit history.
+- Preserve standalone publishing and add explicit local takeover plus a
+  non-destructive agent installer. Add operations/protocol documentation and
+  automated acceptance tests; physical two-Pi USB acceptance remains pending.
+
+
 ## 1.3.0 - 2026-09-06
 
 - Added an optional, locally served G-code toolpath viewer with 3D rotation, zoom, top view, layer selection, and travel visibility.

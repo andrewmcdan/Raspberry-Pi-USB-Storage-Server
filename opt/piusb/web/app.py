@@ -116,6 +116,12 @@ def staging_lock(*, blocking: bool) -> Iterator[None]:
         except BlockingIOError as error:
             raise RuntimeError("A publish or another staging operation is currently running") from error
         try:
+            try:
+                control = json.loads((STATE_DIR / 'fleet' / 'control.json').read_text())
+            except FileNotFoundError:
+                control = {}
+            if control.get('mode') == 'managed':
+                raise RuntimeError('Central manager owns staging; request local takeover first')
             yield
         finally:
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
@@ -394,7 +400,25 @@ def require_login():
             ), 401
         return redirect(url_for("login", next=request.path))
     csrf_token()
+    if request.method == 'POST' and request.endpoint not in {'logout', 'local_takeover'}:
+        try:
+            control = json.loads((STATE_DIR / 'fleet' / 'control.json').read_text())
+        except FileNotFoundError:
+            control = {}
+        if control.get('mode') == 'managed' or (RUNTIME_DIR / 'takeover.request').exists():
+            abort(409, 'Central manager owns this Pi. Request local takeover and wait for acknowledgment before editing.')
     return None
+
+
+@app.post('/local-takeover')
+def local_takeover():
+    verify_csrf()
+    request_file = RUNTIME_DIR / 'takeover.request'
+    temporary = RUNTIME_DIR / ('.takeover-' + uuid.uuid4().hex)
+    temporary.write_text(json.dumps({'request_id': str(uuid.uuid4()), 'operation': 'takeover'}))
+    os.replace(temporary, request_file)
+    flash('Local takeover requested. Wait until control mode shows local; any active operation must finish first.', 'success')
+    return redirect(url_for('index'))
 
 
 @app.context_processor
@@ -434,8 +458,13 @@ def index():
     selected_folder = request.args.get("folder", "").strip().replace("\\", "/")
     if selected_folder not in available_folders:
         selected_folder = ""
+    try:
+        fleet_control = json.loads((STATE_DIR / 'fleet' / 'control.json').read_text())
+    except FileNotFoundError:
+        fleet_control = {}
     return render_template(
         "index.html",
+        fleet_control=fleet_control,
         files=staged_files(),
         folders=folders,
         managed_folders=[folder for folder in folders if folder["path"]],
