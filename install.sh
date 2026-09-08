@@ -245,6 +245,7 @@ echo "Creating the initial A and B images..."
 
 systemctl daemon-reload
 systemctl enable piusb-gadget.service piusb-publish.path piusb-web.service avahi-daemon.service
+bash "${SOURCE_DIR}/install-wifi-watchdog.sh"
 
 echo
 echo "Installation complete. For a Pi Zero 2 W, shut down and move from PWR IN"

@@ -16,6 +16,7 @@ for key, value in expected.items():
 PY
 apt-get update
 apt-get install -y python3-requests
+bash "${SOURCE_DIR}/install-wifi-watchdog.sh"
 # Drain running operations before replacing their Python code.
 systemctl stop piusb-agent.service 2>/dev/null || true
 systemctl stop piusb-publish.path

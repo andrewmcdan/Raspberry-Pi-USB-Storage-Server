@@ -2,6 +2,10 @@
 
 ## Central fleet manager (unreleased)
 
+- Add a NetworkManager Wi-Fi watchdog with continuous saved-profile retries,
+  stalled-connection recovery, a standalone installer, and boot-time startup.
+
+
 - Add Docker-hosted manager, PostgreSQL state, authenticated enrollment, named
   devices/groups, editable file drafts and collections, and immutable deployment reviews.
 - Add outbound Pi agents with resumable verified downloads, separate prepare and

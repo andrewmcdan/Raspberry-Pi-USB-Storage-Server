@@ -31,6 +31,11 @@ automated simulation does not establish hardware compatibility.
 
 ## Standalone Pi publisher
 
+Automatic Wi-Fi recovery is included in new installations. To add it to an
+existing Pi without changing USB contents or publisher services, run
+`sudo bash ./install-wifi-watchdog.sh`. It monitors every 30 seconds and retries
+saved Wi-Fi connections indefinitely. See [Wi-Fi recovery](docs/wifi-recovery.md).
+
 Version 1.3.0, 2026-09-06
 
 Pi USB Publisher turns a Raspberry Pi into a read-only USB mass-storage device whose contents are managed through a small web interface.
