@@ -57,10 +57,17 @@ Implementation-run evidence, 2026-09-08:
   remained idempotent. The original 16 GiB image B was restored with unchanged
   inode, size, modification time, and active-slot record. All existing publisher
   services and `piusbctl verify` passed afterward. Neither original image was
-  rebuilt, and no permanent agent installation/enrollment was performed.
+  rebuilt during that isolated test.
+- **Permanent non-destructive code upgrade passed** on the same Pi afterward.
+  All installed `/opt/piusb` source files and new systemd units matched the
+  repository. Image inode/size/mtime, staged-file hashes, configuration hashes,
+  and USB binding were unchanged. Publisher, fleet watcher and Wi-Fi services
+  were active; local web returned HTTP 200 and `piusbctl verify` passed. The
+  agent is installed and enabled but awaits enrollment. Software/configuration
+  backup is retained under `/var/backups/piusb/fleet-upgrade-20260908-164848`.
 
 Still pending: a second physical Pi, printer-side file browsing, hardware agent
-installation/enrollment against a permanent HTTPS manager, large-file/long-running
+enrollment against a permanent HTTPS manager, large-file/long-running
 transfer and power-loss testing, and a backup/restore drill. The real hardware
 test exercised the new privileged bridge directly; the outbound network agent
 was exercised in Compose. These are distinct pieces of evidence.
