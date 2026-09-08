@@ -2,6 +2,10 @@
 
 ## Central fleet manager (unreleased)
 
+- Import existing active USB and local staging files through the outbound agent,
+  with read-only capture, resumable verified uploads, browsing, draft editing,
+  folder uploads and G-code preview in the manager.
+
 - Add a NetworkManager Wi-Fi watchdog with continuous saved-profile retries,
   stalled-connection recovery, a standalone installer, and boot-time startup.
 

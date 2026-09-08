@@ -72,8 +72,18 @@
             <select id="folder"></select></label
           ><label
             >Upload files <input id="uploads" type="file" multiple /></label
+          ><label>Upload folder <input id="folder-uploads" type="file" webkitdirectory multiple /></label
           ><button id="new-folder">New folder</button
           ><button id="stop-upload">Stop after current file</button>
+        </div>
+        <div id="pi-snapshots" hidden>
+          <h3>Existing files on this Pi</h3>
+          <p>Active USB and local staging can differ. Importing reads a snapshot without switching USB.
+          Copy a snapshot into the draft to edit it, then review and deploy your changes.</p>
+          <button id="capture-active">Refresh active USB files</button>
+          <button id="capture-staging">Refresh local staging</button>
+          <button id="refresh-snapshots">Refresh import status</button>
+          <div id="snapshot-list"></div>
         </div>
         <div id="upload-progress"></div>
         <div class="scroll">
@@ -91,6 +101,12 @@
       </section>
       <section id="publish" class="hidden">
         <h2>Review and deploy</h2>
+        <fieldset>
+          <legend>Target Pis</legend>
+          <p>Select one or more Pis, or add a saved group.</p>
+          <div id="deploy-groups" class="row"></div>
+          <div id="deploy-targets"></div>
+        </fieldset>
         <p id="target-summary"></p>
         <label
           >File source

@@ -22,7 +22,8 @@ from werkzeug.security import check_password_hash
 
 sys.path.append(str(Path(__file__).resolve().parents[1] / 'opt' / 'piusb'))
 from protocol import MAX_FILE, diff, manifest_hash, valid_path, validate_manifest
-from manager.models import Audit, Base, Collection, Deployment, Device, Enrollment, Group, Review, uid
+from manager.pi_files import register as register_pi_files, pending as pending_snapshot
+from manager.models import PiSnapshot, Audit, Base, Collection, Deployment, Device, Enrollment, Group, Review, uid
 
 TERMINAL = {'succeeded', 'failed', 'canceled'}
 STATES = {'queued', 'downloading', 'building', 'prepared', 'switching'} | TERMINAL
@@ -98,6 +99,8 @@ def create_app(config=None):
                 path = blobs / item['sha256']
                 if not path.is_file() or path.stat().st_size != item['size']:
                     raise ValueError(f"Missing content for {item['path']}")
+
+    register_pi_files(app, blobs, locked, audit, check_blobs)
 
     @app.before_request
     def authorize():
@@ -374,9 +377,14 @@ def create_app(config=None):
                 raise ValueError(f'{d.name} needs a maintenance window')
             active_id = d.telemetry.get('active_deployment')
             active = g.db.get(Deployment, active_id) if active_id else None
-            old = active.manifest if active and active.manifest is not None else []
+            captured = None
+            if active is None or d.local:
+                captured = g.db.scalar(select(PiSnapshot).where(PiSnapshot.device_id == key,
+                    PiSnapshot.source == 'active', PiSnapshot.state == 'ready').order_by(PiSnapshot.created.desc()).limit(1))
+            old = captured.manifest if captured else (active.manifest if active and active.manifest is not None else [])
             entries.append({'device': key, 'name': d.name, 'serial': d.serial, 'manifest': manifest,
                             'hash': manifest_hash(manifest), 'total': total, 'diff': diff(old, manifest),
+                            'baseline_captured_at': captured.created if captured else None,
                             'local_takeover': d.local, 'current_contents_known': bool(active) and not d.local})
         row = Review(payload={'entries': entries, 'policy': policy, 'due': due,
                               'resume_local': bool(data.get('resume_local'))})
@@ -492,8 +500,9 @@ def create_app(config=None):
                 row.error = str(report.get('error', ''))[:8000]
         row = g.db.scalar(select(Deployment).where(Deployment.device_id == d.id,
                           Deployment.state.not_in(TERMINAL)).order_by(Deployment.created, Deployment.id).limit(1))
+        snapshot = pending_snapshot(g.db, d.id)
         assignment = None
-        if row:
+        if row and snapshot is None:
             if row.state == 'queued' and not d.paused and (not d.local or row.resume_local):
                 row.state = 'downloading'
             if row.state != 'queued':
@@ -508,7 +517,8 @@ def create_app(config=None):
                               'state': row.state, 'cancel': row.canceled,
                               'activate': row.state == 'switching', 'resume_local': row.resume_local}
         g.db.commit()
-        return jsonify(assignment=assignment, paused=d.paused, poll_seconds=15)
+        return jsonify(assignment=assignment, paused=d.paused, poll_seconds=15,
+                       snapshot={'id': snapshot.id, 'source': snapshot.source} if snapshot else None)
 
     @app.get('/api/v1/device/content/<digest>')
     def device_content(digest):

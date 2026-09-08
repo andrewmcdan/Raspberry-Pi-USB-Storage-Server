@@ -29,7 +29,7 @@ busy() {
 while busy piusb-publish.service || busy piusb-fleet.service; do sleep 2; done
 systemctl stop piusb-web.service
 install -d -o piusb -g piusb -m 0750 /srv/piusb/agent
-for file in manager.py protocol.py fleet.py agent.py; do
+for file in manager.py protocol.py fleet.py agent.py pi_export.py pi_import.py; do
     install -o root -g root -m 0755 "${SOURCE_DIR}/opt/piusb/${file}" "/opt/piusb/${file}"
 done
 install -o root -g root -m 0644 "${SOURCE_DIR}/opt/piusb/web/app.py" /opt/piusb/web/app.py

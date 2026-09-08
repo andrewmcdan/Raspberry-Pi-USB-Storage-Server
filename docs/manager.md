@@ -102,6 +102,43 @@ revoke the old credential in the manager, preserve `device-id`, and issue a new
 enrollment token. If the enrollment response is lost, the device may already
 exist in inventory; revoke it before retrying with a new token.
 
+## Existing Pi files and folders
+
+In **Files & collections**, select a Pi, then choose **Refresh active USB files**
+or **Refresh local staging**. The active disk is what the USB host sees; local
+staging may contain unpublished changes or may predate a managed deployment.
+These are separate, explicitly refreshed snapshots, not live filesystem views.
+Expand a ready snapshot to browse and download its files. Choose **Copy into
+editable draft** to replace only the manager draft. Use the existing folder,
+upload, replacement, recursive deletion, download, and deployment controls.
+**Upload folder** preserves browser-supplied relative paths; create empty folders
+with **New folder**. G-code files up to 100 MiB can be previewed from the draft.
+
+Importing does not edit staging, rebuild an image, or disconnect USB. The root
+bridge holds the publisher and staging locks, mounts the active image read-only,
+and copies a verified snapshot. It requires snapshot-sized free space plus
+64 MiB on the Pi. The agent uploads missing content in resumable 8 MiB chunks;
+completed hashes are reused. No inbound Pi connection is needed. The UI shows
+requested/uploading/ready/failed state. Use **Refresh import status** to update
+it. Only one import can be pending per Pi. Imports wait for connectivity; cancel
+an obsolete import to unblock subsequent deployments. A running capture finishes
+safely even if canceled, and canceled content is never automatically deployed.
+
+The manager retains the latest successful snapshot for each source; drafts and
+historical deployments retain independent copies of their manifests. Root-owned
+`/var/lib/piusb/pi-export/` holds the most recent export's content, replaced on
+the next capture; `pi-export.json` records its result for restart reconciliation.
+`manager/pi_files.py` implements snapshot APIs and shared G-code preview;
+`opt/piusb/pi_export.py` performs privileged capture and `pi_import.py` transfers
+it. The new `pi_snapshots` table is created by the existing Compose initialization
+step; no existing columns or records are rewritten.
+
+Upgrade the manager from the repository root with `docker compose up -d --build`
+and each Pi with `sudo bash ./install-agent.sh`. Keep using HTTPS and the same
+existing credentials. Snapshot comparisons show the capture request time;
+refresh after local changes to get an up-to-date baseline. Editing a draft still
+requires **review and deploy** to change USB contents.
+
 ## Files and publishing
 
 1. Select Pis in **Devices**, or select a named group. Groups can be saved from
@@ -163,7 +200,7 @@ partials resume with HTTP Range and are verified with SHA-256 before use.
 Validation/build errors require explicit retry. Revoked or conflicting credentials
 stop successful check-ins; inspect `journalctl -u piusb-agent.service`.
 
-The root bridge accepts only prepare, activate, and takeover, with UUID identifiers
+The root bridge accepts only prepare, activate, takeover, and read-only export, with UUID identifiers
 and fixed paths. It opens candidate components without following symlinks, copies
 and verifies files into root-owned snapshots, and builds from those snapshots.
 Durable per-deployment records prevent repeated switching after restarts or lost

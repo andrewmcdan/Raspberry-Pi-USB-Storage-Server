@@ -6,6 +6,8 @@ COPY manager manager
 COPY opt/piusb opt/piusb
 COPY etc/piusb etc/piusb
 COPY tests tests
+COPY scripts scripts
+COPY VERSION VERSION
 USER manager
 EXPOSE 8000
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "8", "--timeout", "3600", "manager.app:create_app()"]

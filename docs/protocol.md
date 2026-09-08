@@ -112,3 +112,23 @@ concurrent draft edit, expired review, or invalid transition conflict. 413: file
 body too large. Clients retry transient network errors with backoff; domain
 failures require an explicit operator action. Uploads are capped at FAT32's
 4 GiB minus one byte. A manifest has at most 100,000 entries.
+
+## Pi contents import
+
+Admin `GET/POST /api/v1/devices/{id}/snapshots` lists or requests an `active`
+or `staging` snapshot. `POST .../snapshots/{snapshot}/draft` requires the current
+`revision` and copies a ready snapshot into the device draft. `POST
+.../snapshots/{snapshot}/cancel` cancels pending capture/transfer.
+Check-in returns an optional `snapshot: {id, source}` instead of issuing a
+new deployment while an import is pending. Device-authenticated endpoints are:
+
+- `POST /api/v1/device/snapshots/{id}/manifest`: immutable manifest or terminal
+  error; returns missing hashes with sizes and resumable offsets.
+- `PUT .../{id}/content/{sha256}?offset=N`: at most 8 MiB raw bytes; validates
+  offset, size and final SHA-256. A lost acknowledgment is reconciled by querying
+  the manifest again. An empty file uses one zero-byte PUT.
+- `POST .../{id}/complete`: validates all blobs, marks ready, idempotent on retry.
+
+Each endpoint restricts the device to its own import. Metadata is durable in
+`pi_snapshots`; retention protects imported manifests. Privileged `export`
+requests accept only a UUID request ID and fixed `active`/`staging` source.

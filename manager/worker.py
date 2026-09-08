@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 from sqlalchemy import select, text
 from manager.app import create_app
-from manager.models import Collection, Deployment, Device, Review
+from manager.models import PiSnapshot, Collection, Deployment, Device, Review
 
 
 def collect(app, now=None):
@@ -30,6 +30,7 @@ def collect(app, now=None):
         refs = set()
         manifests = [x.draft for x in devices + collections]
         manifests += [x.manifest for x in db.scalars(select(Deployment)) if x.manifest is not None]
+        manifests += [x.manifest for x in db.scalars(select(PiSnapshot))]
         for review in db.scalars(select(Review).with_for_update()):
             if now - review.created < 3600:
                 manifests += [x['manifest'] for x in review.payload['entries']]

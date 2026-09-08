@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ relative }} — G-code preview</title>
+  <link rel="stylesheet" href="{{ url_for('preview_asset', filename='viewer.css') }}">
+  <script defer src="{{ url_for('preview_asset', filename='viewer.js') }}"></script>
+</head>
+<body>
+  <main id="viewer" data-source="{{ url_for('admin_download', digest=digest) }}"
+        data-worker="{{ url_for('preview_asset', filename='worker.js') }}"
+        data-max-bytes="{{ max_bytes }}" data-size="{{ size }}">
+    <header>
+      <div><a href="{{ url_for('index') }}">← Manager</a><h1>G-code preview</h1><p class="filename">{{ relative }}</p></div>
+      <a class="button" href="{{ url_for('admin_download', digest=digest) }}">Download G-code</a>
+    </header>
+    <p class="muted">Preview of an immutable manager copy. Draft edits reach the USB host only after deployment.</p>
+    <section class="panel" aria-label="Toolpath preview">
+      <div class="load-row"><p id="status" role="status" aria-live="polite">Loading G-code…</p><button id="cancel" type="button">Cancel loading</button></div>
+      <progress id="progress" max="100" value="0" aria-label="Loading progress"></progress>
+      <p id="warnings" class="warning" hidden></p>
+      <noscript><p class="warning">Enable JavaScript to view the toolpath. Downloads and publishing still work without it.</p></noscript>
+      <canvas id="toolpath" tabindex="0" aria-label="3D G-code toolpath. Use arrow keys to rotate, plus and minus to zoom, and 0 to fit." aria-describedby="view-help">Your browser needs Canvas support to display the toolpath.</canvas>
+      <p id="view-help" class="muted">Drag to rotate · Scroll to zoom · Arrow keys to rotate · + / − to zoom · 0 to fit. Orange: selected layer. Cyan: earlier layers. Gray: travel.</p>
+      <fieldset id="controls" disabled>
+        <legend>View controls</legend>
+        <div class="toolbar">
+          <button id="fit" type="button">Fit view</button><button id="top" type="button">Top view</button><button id="orbit" type="button">3D view</button>
+          <button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="zoom-out" type="button" aria-label="Zoom out">−</button>
+          <label><input id="travel" type="checkbox"> Show travel</label>
+          <label><input id="single" type="checkbox"> Selected layer only</label>
+        </div>
+        <div class="layer-row"><button id="previous" type="button" aria-label="Previous layer">Previous</button>
+          <div><label for="layer">Layer <output id="layer-label" for="layer">—</output></label><input id="layer" type="range" min="1" max="1" value="1"></div>
+          <button id="next" type="button" aria-label="Next layer">Next</button></div>
+      </fieldset>
+      <p id="summary" class="muted"></p>
+    </section>
+    <p class="muted">Approximate toolpath preview, not a printer simulation. Firmware macros, leveling, tool offsets, and printer-specific behavior are not simulated. Plain-text files up to 100 MiB are supported; binary G-code is not supported.</p>
+  </main>
+</body>
+</html>

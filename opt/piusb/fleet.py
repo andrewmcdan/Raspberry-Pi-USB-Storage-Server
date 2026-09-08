@@ -81,11 +81,17 @@ def process(s, request):
     m.ensure_directories(s)
     request_id = str(uuid.UUID(request['request_id']))
     operation = request.get('operation')
-    if operation not in ('prepare', 'activate', 'takeover'):
+    if operation not in ('prepare', 'activate', 'takeover', 'export'):
         raise ValueError('Unsupported fleet operation')
     root, control_file = paths(s)
     with m.exclusive_lock(s.manager_lock), m.exclusive_lock(s.staging_lock):
         reconcile(s)
+        if operation == 'export':
+            previous = m.read_json(s.state_dir / 'pi-export.json')
+            if previous.get('id') == request_id:
+                return dict(previous, request_id=request_id)
+            from pi_export import export
+            return export(s, request_id, request.get('source'))
         if operation == 'takeover':
             current = m.read_json(s.status_file).get('active_deployment')
             if current:

@@ -51,12 +51,7 @@ function tab(name) {
   if (name === "files") action(loadSet)();
   if (name === "history") action(loadHistory)();
   if (name === "audit") action(loadAudit)();
-  $("target-summary").textContent =
-    "Selected: " +
-    inventory.devices
-      .filter((d) => selected.has(d.id))
-      .map((d) => d.name + " (" + d.serial + ")")
-      .join(", ");
+  renderTargets();
 }
 document
   .querySelectorAll("[data-tab]")
@@ -115,6 +110,7 @@ async function refresh() {
     .join("");
 }
 function renderDevices() {
+  renderTargets();
   const q = $("search").value.toLowerCase();
   $("devices").innerHTML =
     inventory.devices
@@ -141,6 +137,7 @@ function renderDevices() {
         x.checked
           ? selected.add(x.dataset.select)
           : selected.delete(x.dataset.select);
+        renderTargets();
       }),
   );
   document.querySelectorAll("[data-group]").forEach(
@@ -262,6 +259,7 @@ async function loadSet() {
   if (!selectedSet) return;
   draft = await api("sets/" + selectedSet);
   renderFiles();
+  await loadSnapshots();
 }
 function renderFiles() {
   const folder = $("folder").value;
@@ -275,7 +273,7 @@ function renderFiles() {
   $("file-list").innerHTML = draft.manifest
     .map(
       (x, i) =>
-        `<tr><td>${x.kind === "dir" ? "📁 " : ""}${esc(x.path)}</td><td>${x.kind === "dir" ? "Folder" : size(x.size)}</td><td>${x.kind === "file" ? `<a href="/api/v1/content/${x.sha256}" download="${esc(x.path.split("/").pop())}">Download</a> ` : ""}<button data-delete="${i}">Delete</button></td></tr>`,
+        `<tr><td>${x.kind === "dir" ? "📁 " : ""}${esc(x.path)}</td><td>${x.kind === "dir" ? "Folder" : size(x.size)}</td><td>${x.kind === "file" ? `<a href="/api/v1/content/${x.sha256}" download="${esc(x.path.split("/").pop())}">Download</a> ${previewLink(x)} ` : ""}<button data-delete="${i}">Delete</button></td></tr>`,
     )
     .join("");
   document.querySelectorAll("[data-delete]").forEach(
@@ -327,16 +325,16 @@ $("apply-collection").onclick = action(async () => {
 $("stop-upload").onclick = () => {
   stopUpload = true;
 };
-$("uploads").onchange = action(async () => {
+$("uploads").onchange = $("folder-uploads").onchange = action(async (event) => {
   if (!selectedSet) return;
   uploading = true;
   stopUpload = false;
   $("set-picker").disabled = true;
   const folder = $("folder").value;
   try {
-    for (const file of $("uploads").files) {
+    for (const file of event.target.files) {
       if (stopUpload) break;
-      const path = (folder ? folder + "/" : "") + file.name;
+      const path = (folder ? folder + "/" : "") + (file.webkitRelativePath || file.name);
       $("upload-progress").textContent = "Uploading " + path;
       const record = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -359,7 +357,14 @@ $("uploads").onchange = action(async () => {
         xhr.onerror = () => reject(Error("Upload connection failed"));
         xhr.send(file);
       });
+      const parents = [];
+      const parts = path.split("/");
+      for (let i = 1; i < parts.length; i++) {
+        const parent = parts.slice(0, i).join("/");
+        if (!draft.manifest.some(x => x.path === parent)) parents.push({kind: "dir", path: parent});
+      }
       await saveDraft([
+        ...parents,
         ...draft.manifest.filter((x) => x.path !== path),
         { kind: "file", path, ...record },
       ]);
@@ -369,6 +374,7 @@ $("uploads").onchange = action(async () => {
     uploading = false;
     $("set-picker").disabled = false;
     $("uploads").value = "";
+    $("folder-uploads").value = "";
   }
 });
 $("review").onclick = action(async () => {
@@ -388,7 +394,7 @@ function showReview(r) {
       r.entries
         .map(
           (e) =>
-            `<h3>${esc(e.name)} · ${esc(e.serial)}</h3><p>${size(e.total)}${!e.current_contents_known ? " · Current USB contents are local or unknown; this replaces the entire file set." : ""}</p><details open><summary>Changes</summary><pre>${esc(JSON.stringify(e.diff, null, 2))}</pre></details><details><summary>Complete intended contents</summary><pre>${esc(e.manifest.map((x) => x.path).join("\n"))}</pre></details>`,
+            `<h3>${esc(e.name)} · ${esc(e.serial)}</h3><p>${size(e.total)}${e.baseline_captured_at ? " · Compared with active USB snapshot requested " + when(e.baseline_captured_at) : ""}${!e.current_contents_known ? " · Current USB contents are local or unknown; this replaces the entire file set." : ""}</p><details open><summary>Changes</summary><pre>${esc(JSON.stringify(e.diff, null, 2))}</pre></details><details><summary>Complete intended contents</summary><pre>${esc(e.manifest.map((x) => x.path).join("\n"))}</pre></details>`,
         )
         .join("") +
       '<button id="commit-deployment" class="primary">Deploy this snapshot to these Pis</button>',
@@ -468,3 +474,63 @@ setInterval(
   }),
   5000,
 );
+
+async function loadSnapshots() {
+  const current = selectedSet;
+  const isPi = current?.startsWith("devices/");
+  $("pi-snapshots").hidden = !isPi;
+  if (!isPi) return;
+  const response = await api(current + "/snapshots");
+  if (current !== selectedSet) return;
+  $("snapshot-list").innerHTML = response.snapshots.map(s =>
+    `<details><summary>${s.source === "active" ? "Active USB disk" : "Local staging"} - ${esc(s.state)} - ${when(s.created)} - ${s.manifest.length} entries</summary>
+    <p>${esc(s.error)}</p>${s.state !== "ready" && s.state !== "failed" ? `<button data-cancel-snapshot="${s.id}">Cancel import</button>` : ""}${s.state === "ready" ? `<button data-import-snapshot="${s.id}">Copy into editable draft</button>` : ""}
+    <ul>${s.manifest.map(f => `<li>${esc(f.path)} ${f.kind === "file" ? `(${size(f.size)}) ${s.state === "ready" ? `<a href="/api/v1/content/${f.sha256}" download="${esc(f.path.split("/").pop())}">Download</a>` : ""}` : "(folder)"}</li>`).join("")}</ul></details>`).join("") || "Choose Refresh active USB files or Refresh local staging to import existing contents.";
+  document.querySelectorAll("[data-cancel-snapshot]").forEach(b => b.onclick = action(async () => { await api(current + "/snapshots/" + b.dataset.cancelSnapshot + "/cancel", "POST", {}); await loadSnapshots(); }));
+  document.querySelectorAll("[data-import-snapshot]").forEach(button => {
+    button.onclick = action(async () => {
+      if (uploading) throw Error("Wait for the upload to finish");
+      if (!confirm("Replace this manager draft with the selected Pi snapshot? USB contents will stay unchanged until deployment.")) return;
+      await api(current + "/snapshots/" + button.dataset.importSnapshot + "/draft", "POST", {revision: draft.revision});
+      await loadSet();
+    });
+  });
+}
+for (const source of ["active", "staging"]) {
+  $("capture-" + source).onclick = action(async () => {
+    await api(selectedSet + "/snapshots", "POST", {source});
+    await loadSnapshots();
+  });
+}
+$("refresh-snapshots").onclick = action(loadSnapshots);
+
+function previewLink(file) {
+  return /\.(gcode|gco|g|nc)$/i.test(file.path) && file.size <= 100 * 1024**2
+    ? `<a target="_blank" rel="noopener" href="/preview/${file.sha256}/${encodeURIComponent(file.path.split("/").pop())}">Preview</a>` : "";
+}
+
+let targetSignature = "";
+function renderTargets() {
+  const eligible = inventory.devices.filter(d => !d.revoked);
+  for (const id of selected) if (!eligible.some(d => d.id === id)) selected.delete(id);
+  const signature = JSON.stringify([eligible.map(d => [d.id, d.name, d.serial, d.online]), inventory.groups, [...selected]]);
+  if (signature !== targetSignature) {
+    targetSignature = signature;
+    $("deploy-targets").innerHTML = eligible.map(d =>
+      `<label><input type="checkbox" data-deploy-select="${d.id}" ${selected.has(d.id) ? "checked" : ""}> ${esc(d.name)} · ${esc(d.serial)} · ${d.online ? "Online" : "Offline (will deploy when connected)"}</label>`).join("") || "No enrolled Pis available.";
+    $("deploy-groups").innerHTML = inventory.groups.map(g => `<button type="button" data-deploy-group="${g.id}">Add ${esc(g.name)}</button>`).join("");
+    document.querySelectorAll("[data-deploy-select]").forEach(input => input.onchange = () => {
+      input.checked ? selected.add(input.dataset.deploySelect) : selected.delete(input.dataset.deploySelect);
+      renderDevices();
+    });
+    document.querySelectorAll("[data-deploy-group]").forEach(button => button.onclick = () => {
+      for (const id of inventory.groups.find(g => g.id === button.dataset.deployGroup).devices)
+        if (eligible.some(d => d.id === id)) selected.add(id);
+      renderDevices();
+    });
+  }
+  $("target-summary").textContent = selected.size
+    ? "Selected: " + eligible.filter(d => selected.has(d.id)).map(d => d.name + " (" + d.serial + ")").join(", ")
+    : "Select at least one Pi to review a deployment.";
+  $("review").disabled = selected.size === 0;
+}

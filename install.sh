@@ -145,6 +145,7 @@ chown piusb:piusb /run/piusb/staging.lock
 chmod 0660 /run/piusb/staging.lock
 
 install -o root -g root -m 0755 "${SOURCE_DIR}/opt/piusb/manager.py" /opt/piusb/manager.py
+install -o root -g root -m 0644 "${SOURCE_DIR}/opt/piusb/pi_export.py" /opt/piusb/pi_export.py
 install -o root -g root -m 0644 "${SOURCE_DIR}/opt/piusb/fleet.py" /opt/piusb/fleet.py
 install -o root -g root -m 0644 "${SOURCE_DIR}/opt/piusb/protocol.py" /opt/piusb/protocol.py
 install -o root -g root -m 0644 "${SOURCE_DIR}/VERSION" /opt/piusb/VERSION

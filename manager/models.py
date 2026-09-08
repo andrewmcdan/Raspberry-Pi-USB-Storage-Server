@@ -87,3 +87,14 @@ class Audit(Base):
     actor: Mapped[str] = mapped_column(String(100))
     action: Mapped[str] = mapped_column(String(100))
     detail: Mapped[dict] = mapped_column(JSON)
+
+
+class PiSnapshot(Base):
+    __tablename__ = 'pi_snapshots'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    device_id: Mapped[str] = mapped_column(ForeignKey('devices.id'), index=True)
+    source: Mapped[str] = mapped_column(String(16))
+    state: Mapped[str] = mapped_column(String(16), default='requested')
+    created: Mapped[float] = mapped_column(Float, default=time.time)
+    manifest: Mapped[list] = mapped_column(JSON, default=list)
+    error: Mapped[str] = mapped_column(Text, default='')

@@ -90,7 +90,7 @@ class Agent:
             ips = sorted({x[4][0] for x in socket.getaddrinfo(socket.gethostname(), None)})
         except socket.gaierror:
             ips = []
-        return {'hostname': socket.gethostname(), 'ips': ips, 'version': '2.0.0',
+        return {'hostname': socket.gethostname(), 'ips': ips, 'version': '2.1.0',
                 'capacity': int(self.settings.get('image_size_mib', 4096)) * 1024**2 *
                             int(self.settings.get('staging_fill_percent', 90)) // 100,
                 'free_bytes': shutil.disk_usage(self.data).free,
@@ -225,6 +225,19 @@ class Agent:
     def tick(self):
         response = self.poll()
         assignment = response.get('assignment')
+        if response.get('snapshot') and not assignment:
+            from pi_import import transfer
+            try:
+                transfer(self, response['snapshot'])
+            except requests.HTTPError as error:
+                if error.response.status_code not in (403, 409):
+                    raise
+                # A canceled import or lost chunk acknowledgment is reconciled next poll.
+            except (OSError, ValueError) as error:
+                failed = self.http.post(self.config['url'] + '/api/v1/device/snapshots/' + response['snapshot']['id'] + '/manifest',
+                                        json={'error': str(error)}, timeout=30)
+                failed.raise_for_status()
+            return
         if not assignment:
             return
         job = self.state.get('job')

@@ -105,3 +105,18 @@ host behavior. Keep a backup of current staging first.
 Do not infer USB-host compatibility, power-loss behavior, or multi-GB SD-card
 performance solely from automated checks. Physical power-interruption testing
 should use disposable data and include reboot during both build and switch.
+
+## Existing-files import acceptance (2026-09-08)
+
+70 Python tests and 2 subtests passed in Linux Docker. New checks cover device
+isolation, unsafe paths, immutable manifests, wrong hashes, offset recovery,
+lost upload acknowledgments, draft revision conflicts, retention, preview auth,
+read-only mounting, symlink rejection, insufficient space and idempotent capture.
+On CentauriCarbon2Drive the production HTTPS manager imported both active image B
+and local staging: 12 files and 5 directories each, 130,542,475 file bytes.
+All manager-side blob hashes were verified. The active disk was mounted with
+`loop,ro,nodev,nosuid,noexec` and unmounted cleanly; the USB backing image stayed
+unchanged. The initially empty manager draft was populated from the active
+snapshot; no deployment or USB switch was submitted. Browser inventory loaded
+with the updated device; file edit/preview routes were verified by automated API
+checks. Second-Pi and multi-GB import acceptance remain pending.
