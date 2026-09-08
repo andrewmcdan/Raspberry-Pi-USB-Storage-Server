@@ -10,5 +10,5 @@ try {
     }
     docker compose up -d
     if ($LASTEXITCODE -ne 0) { throw 'Manager startup failed' }
-    Write-Host 'Manager is listening on 127.0.0.1:8000. Configure HTTPS using docs/manager.md before connecting Pis.'
+    Write-Host 'Manager is listening on 127.0.0.1:8881. Configure HTTPS using docs/manager.md before connecting Pis.'
 } finally { Pop-Location }

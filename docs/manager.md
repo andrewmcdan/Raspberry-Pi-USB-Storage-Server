@@ -38,7 +38,7 @@ docker compose logs --tail=100 manager scheduler
 
 ## HTTPS on your LAN/VPN
 
-The manager binds only to server loopback, `127.0.0.1:8000`. Put your existing
+The manager binds only to server loopback, `127.0.0.1:8881`. Put your existing
 HTTPS reverse proxy in front of it. Configure the proxy to preserve the Host
 header, support streaming uploads and Range responses, and allow requests up
 to 4 GiB with long transfer timeouts. Example nginx location within an HTTPS
@@ -46,7 +46,7 @@ server configured with your certificate and private key:
 
 ```nginx
 location / {
-    proxy_pass http://127.0.0.1:8000;
+    proxy_pass http://127.0.0.1:8881;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto https;
     client_max_body_size 4g;

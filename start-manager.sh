@@ -7,4 +7,4 @@ if [[ ! -f .env ]]; then
     chmod 600 .env
 fi
 docker compose up -d
-echo 'Manager is listening on 127.0.0.1:8000. Configure HTTPS using docs/manager.md before connecting Pis.'
+echo 'Manager is listening on 127.0.0.1:8881. Configure HTTPS using docs/manager.md before connecting Pis.'

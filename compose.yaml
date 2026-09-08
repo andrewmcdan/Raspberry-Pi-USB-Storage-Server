@@ -35,7 +35,7 @@ services:
     image: piusb-manager:local
     environment: *environment
     ports:
-      - "127.0.0.1:${MANAGER_PORT:-8000}:8000"
+      - "127.0.0.1:${MANAGER_PORT:-8881}:8000"
     volumes:
       - content:/data/content
     depends_on:
