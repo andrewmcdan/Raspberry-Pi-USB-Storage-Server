@@ -39,7 +39,7 @@ fe41e00c6d3c4009a643c1a2421495f3a8ed565587d508379c5974b41da71d70  ./manager/mode
 4286f8e5e7a3e3c2cbe961cf197509e2c9bcdf9fe41371854222c913839e5e88  ./manager/templates/preview.html
 6ae6cfd659ab6976ad0579fcba07e86af7f97b405779027a686d4aee6f2e8496  ./manager/worker.py
 da68c93da134ebd9259e4460cdc7718def6282ed4b8369c7ddef212b49f9758f  ./opt/piusb/agent.py
-42649f866c5d662323459ba0e0a3fbf508d5e1841e66ec22e44550aa339f1a1a  ./opt/piusb/fleet.py
+4095c70e2a88528c331be88e221c29642ddae1fea0a770ad052bdd84f84f04eb  ./opt/piusb/fleet.py
 bf4b26bef03c11ec1d3fe15e65650ba0ab17cabdba328d3dae19a07768f38a37  ./opt/piusb/manager.py
 c538682fd1d3c80a986c628b26779959c6707ee82cb32b58d6ab753a6ea580b1  ./opt/piusb/pi_export.py
 ce98975ae21ebc0b499fd93d7bf037aa863c3249c6bfc6118dffc10b1def84e3  ./opt/piusb/pi_import.py

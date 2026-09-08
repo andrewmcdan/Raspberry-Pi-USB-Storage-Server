@@ -58,6 +58,16 @@ def bound(s, slot):
             m.read_attr(s.lun_path / 'file') == str(s.image_for_slot(slot).resolve()))
 
 
+def completed_status(s, row):
+    import piusb_publisher as m
+    completed = row.setdefault('completed_at', m.utc_now())
+    m.update_status(s, state='idle', active_deployment=row['id'], prepared_deployment=None,
+                    active=row['target'], target=None, build=row['stats'], active_build=row['stats'],
+                    candidate_build=None, gadget_online=True, error=None,
+                    message=f"Publish complete. USB is online using image {row['target']}",
+                    completed_at=completed, last_successful_publish=completed)
+
+
 def reconcile(s):
     import piusb_publisher as m
     root, _ = paths(s)
@@ -66,7 +76,7 @@ def reconcile(s):
         if row.get('state') == 'activating':
             if m.read_active_slot(s) == row['target'] and bound(s, row['target']):
                 row['state'] = 'succeeded'
-                m.update_status(s, active_deployment=row['id'], prepared_deployment=None)
+                completed_status(s, row)
             else:
                 row.update(state='failed', error='Activation interrupted; inspect USB state before explicit retry')
             m.atomic_write_json(path, row)
@@ -129,7 +139,8 @@ def process(s, request):
             row = {'id': job, 'state': 'building', 'old': active, 'target': 'B' if active == 'A' else 'A',
                    'hash': request['hash'], 'request_id': request_id}
             m.atomic_write_json(path, row)
-            m.update_status(s, state='building', prepared_deployment=None, error=None)
+            m.update_status(s, state='building', prepared_deployment=None, error=None,
+                            started_at=m.utc_now(), message='Building managed deployment', target=row['target'])
             active_job = m.read_json(s.status_file).get('active_deployment')
             snapshots = root / 'snapshots'
             if snapshots.exists():
@@ -164,7 +175,8 @@ def process(s, request):
                 settings = dataclasses.replace(s, staging_dir=snapshot)
                 stats = m.build_image(settings, s.image_for_slot(row['target']))
                 row.update(state='prepared', stats=stats)
-                m.update_status(s, state='idle', prepared_deployment=job, candidate_build=stats)
+                m.update_status(s, state='idle', prepared_deployment=job, candidate_build=stats,
+                                message=f"Image {row['target']} prepared; awaiting manager switch authorization")
             except Exception as error:
                 row.update(state='failed', error=str(error))
                 m.update_status(s, state='error', error=str(error))
@@ -184,14 +196,13 @@ def process(s, request):
             raise RuntimeError('Prepared image was superseded; explicit retry required')
         row.update(state='activating', request_id=request_id)
         m.atomic_write_json(path, row)
-        m.update_status(s, state='switching')
+        m.update_status(s, state='switching', message='Switching USB to prepared managed image')
         try:
             m.swap_gadget_image(s, row['old'], row['target'])
             if not bound(s, row['target']):
                 raise RuntimeError('Expected read-only USB backing image is not bound')
             row['state'] = 'succeeded'
-            m.update_status(s, state='idle', active_deployment=job, prepared_deployment=None,
-                            active=row['target'], active_build=row['stats'], gadget_online=True, error=None)
+            completed_status(s, row)
         except Exception as error:
             row.update(state='failed', error=str(error))
             m.update_status(s, state='error', error=str(error))
