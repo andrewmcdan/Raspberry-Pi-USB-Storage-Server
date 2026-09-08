@@ -38,15 +38,19 @@ docker compose logs --tail=100 manager scheduler
 
 ## HTTPS on your LAN/VPN
 
-The manager binds only to server loopback, `127.0.0.1:8881`. Put your existing
-HTTPS reverse proxy in front of it. Configure the proxy to preserve the Host
+The manager publishes port `8881` on all IPv4 interfaces (`0.0.0.0`) so a
+reverse proxy on another machine can reach it. Set `MANAGER_BIND_ADDRESS` in
+`.env` to bind a specific server address instead. Point your HTTPS reverse proxy
+at `http://MANAGER_SERVER_LAN_IP:8881`, replacing the placeholder with the
+manager server's LAN IP. Restrict access to this backend port to your proxy
+and trusted network. Configure the proxy to preserve the Host
 header, support streaming uploads and Range responses, and allow requests up
 to 4 GiB with long transfer timeouts. Example nginx location within an HTTPS
 server configured with your certificate and private key:
 
 ```nginx
 location / {
-    proxy_pass http://127.0.0.1:8881;
+    proxy_pass http://MANAGER_SERVER_LAN_IP:8881;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-Proto https;
     client_max_body_size 4g;
@@ -59,8 +63,8 @@ location / {
 
 Set `PUBLIC_URL` to the exact HTTPS browser origin and recreate the containers
 after changing it. Secure cookies are always enabled. Access the manager through
-that HTTPS origin; HTTP on loopback is intended only for health checks and
-isolated development tests. Avoid adding another login page in front of the
+that HTTPS origin; the HTTP backend is intended for reverse-proxy traffic,
+health checks, and isolated development tests. Avoid adding another login page in front of the
 device API; device authentication uses its own bearer credentials.
 
 Use a certificate trusted by the Pis. For a private CA, install its root in the
